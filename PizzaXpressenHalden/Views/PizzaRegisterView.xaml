@@ -1,0 +1,96 @@
+<!-- File: Views/PizzaRegisterView.xaml -->
+<UserControl x:Class="PizzaXpressenHalden.Views.PizzaRegisterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="440"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- VENSTRE -->
+        <StackPanel Grid.Column="0">
+            <StackPanel.Resources>
+                <Style TargetType="{x:Type TextBlock}">
+                    <Setter Property="Foreground" Value="#F5F5F5"/>
+                </Style>
+                <Style TargetType="{x:Type CheckBox}">
+                    <Setter Property="Foreground" Value="#F5F5F5"/>
+                </Style>
+            </StackPanel.Resources>
+
+            <TextBlock Text="Pizzaregister" FontSize="22" FontWeight="Bold" Margin="0,0,0,12"/>
+
+            <WrapPanel Margin="0,0,0,10">
+                <Button Content="Oppdater" Command="{Binding RefreshCommand}" Width="120" Margin="0,0,10,0"/>
+                <Button Content="Ny pizza" Command="{Binding NewCommand}" Width="120"/>
+            </WrapPanel>
+
+            <ListBox ItemsSource="{Binding Pizzas}" SelectedItem="{Binding SelectedPizza}" Height="520">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Foreground="Black">
+              <Run Text="{Binding Nummer}"/>
+              <Run Text=" - "/>
+              <Run Text="{Binding Navn}"/>
+                        </TextBlock>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+
+        <!-- HØYRE -->
+        <StackPanel Grid.Column="1" Margin="16,0,0,0">
+            <StackPanel.Resources>
+                <Style TargetType="{x:Type TextBlock}">
+                    <Setter Property="Foreground" Value="#F5F5F5"/>
+                </Style>
+                <Style TargetType="{x:Type CheckBox}">
+                    <Setter Property="Foreground" Value="#F5F5F5"/>
+                </Style>
+            </StackPanel.Resources>
+
+            <TextBlock Text="Rediger" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="140"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Text="Nummer" Grid.Row="0" Grid.Column="0" Margin="0,0,8,8"/>
+                <TextBox Text="{Binding SelectedPizza.Nummer}" Grid.Row="0" Grid.Column="1" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Navn" Grid.Row="1" Grid.Column="0" Margin="0,0,8,8"/>
+                <TextBox Text="{Binding SelectedPizza.Navn}" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Beskrivelse" Grid.Row="2" Grid.Column="0" Margin="0,0,8,8"/>
+                <TextBox Text="{Binding SelectedPizza.Beskrivelse}" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Pris M" Grid.Row="3" Grid.Column="0" Margin="0,0,8,8"/>
+                <TextBox Text="{Binding SelectedPizza.PrisMedium}" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Pris L" Grid.Row="4" Grid.Column="0" Margin="0,0,8,8"/>
+                <TextBox Text="{Binding SelectedPizza.PrisLarge}" Grid.Row="4" Grid.Column="1" Margin="0,0,0,8"/>
+
+                <TextBlock Text="Glutenfri" Grid.Row="5" Grid.Column="0" Margin="0,0,8,8"/>
+                <TextBox Text="{Binding SelectedPizza.PrisGlutenfri}" Grid.Row="5" Grid.Column="1" Margin="0,0,0,8"/>
+            </Grid>
+
+            <CheckBox Content="Aktiv" IsChecked="{Binding SelectedPizza.IsActive}" Margin="0,12,0,12"/>
+
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Lagre" Command="{Binding SaveCommand}" Width="140" Margin="0,0,10,0"/>
+                <Button Content="Slett" Command="{Binding DeleteCommand}" Width="140"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>
