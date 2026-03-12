@@ -1,24 +1,26 @@
-﻿using System.Text;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
+﻿using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using PizzaXpressenHalden.ViewModels;
 
-namespace PizzaXpressenHalden
+namespace PizzaXpressenHalden;
+
+public partial class MainWindow : Window
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
+    public MainWindow()
     {
-        public MainWindow()
+        InitializeComponent();
+        WindowState = System.Windows.WindowState.Maximized;
+        PreviewKeyDown += OnPreviewKeyDown;
+    }
+
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm) return;
+
+        if (e.Key == Key.F5)
         {
-            InitializeComponent();
+            vm.GoOrderCommand.Execute(null);
+            e.Handled = true;
         }
     }
 }
