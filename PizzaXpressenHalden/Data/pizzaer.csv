@@ -1,0 +1,22 @@
+﻿nummer,navn,pris_medium,pris_large,pris_glutenfri,beskrivelse
+1,MILLENIUM,239.0,319.0,289.0,"Kjøttdeig, bacon & løk"
+2,VEGETARIANA,224.0,299.0,274.0,"Løk, paprika, fersk champignon, cherrytomater, ananas, mais & oliven"
+3,SPESIAL,239.0,325.0,289.0,"Biff, skinke, salami, fersk champignon, løk & fersk paprika"
+4,SATURDAY NIGHT SPESIAL,239.0,325.0,289.0,"Biff, paprika, fersk champignon, løk"
+5,TROPICANA,239.0,319.0,289.0,Pepperoni & ananas
+6,CHICAGO WAY,224.0,295.0,274.0,Skinke & fersk champignon
+7,TACO KID,239.0,319.0,289.0,"Tacokjøtt, fersk paprika, mais, løk & nacho-chips"
+8,KEBAB SPESIAL,244.0,315.0,294.0,"Halal kebabkjøtt, fersk paprika & mais"
+9,SPANISH HOT,244.0,325.0,294.0,"Marinert pepperbiff, marinert kylling, rødløk og flakes"
+10,EXPRESS TRIPPEL,244.0,319.0,294.0,"Pepperoni, salami, kjøttdeig & løk"
+12,SCANDINAVIA,219.0,289.0,269.0,Skinke i terninger
+13,SETT SAMMEN,254.0,339.0,304.0,Din egen pizza
+15,TANDOORI,254.0,339.0,304.0,"Tandorimarinert kylling, fersk paprika, mais & løk"
+16,EKSTRA HOTTY,249.0,329.0,299.0,"Jalapeños, marinert biff, spekepepperoni, skinketerninger, fersk paprika, løk & dryss med peppermiks"
+17,HUSETS VALG,249.0,329.0,299.0,"Spekepepperoni, skinketerninger, biff, campignon, løk & oregano-dryss"
+18,PARADISIO,249.0,329.0,299.0,"Marinert kylling, skinketerninger, cherrytomater & løk"
+19,BELLA,249.0,329.0,299.0,"Biff, skinke & bacon"
+21,CHICKEN MEXICANA,249.0,329.0,299.0,"Marinert kylling, nacho-chips, fersk paprika, løk & jalapeños"
+22,BARCELONA,249.0,329.0,299.0,"Marinert pepperbiff, chorizopølse, hvitløkskjøttboller, chiliflakes & rødløk"
+23,NEWYORKER,249.0,329.0,299.0,"Crispy chilibacon, skinke, marinert kylling, cherrytomater & chiliflakes"
+24,MEATLOVERS,254.0,339.0,304.0,"Chorizopølse, hvitløkskjøttboller, skinke, peppermarinert biff & crispy chilibacon"
