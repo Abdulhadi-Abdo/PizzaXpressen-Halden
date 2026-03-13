@@ -1,0 +1,86 @@
+﻿pizza_nummer,topping_navn
+1,Bacon
+1,Kjøttdeig
+1,Løk
+2,Ananas
+2,Cherrytomater
+2,Fersk champignon
+2,Løk
+2,Mais
+2,Oliven
+2,Paprika
+3,Biff
+3,Fersk champignon
+3,Løk
+3,Paprika
+3,Salami
+3,Skinke
+4,Biff
+4,Fersk champignon
+4,Løk
+4,Paprika
+5,Ananas
+5,Pepperoni
+6,Fersk champignon
+6,Skinke
+7,Løk
+7,Mais
+7,Nacho-chips
+7,Paprika
+7,Tacokjøtt
+8,Kebabkjøtt
+8,Mais
+8,Paprika
+9,Flakes
+9,Marinert kylling
+9,Marinert pepperbiff
+9,Rødløk
+10,Kjøttdeig
+10,Løk
+10,Pepperoni
+10,Salami
+12,Skinketerninger
+15,Løk
+15,Mais
+15,Paprika
+15,Tandorimarinert kylling
+16,Jalapeños
+16,Løk
+16,Marinert pepperbiff
+16,Paprika
+16,Peppermiks
+16,Skinketerninger
+16,Spekepepperoni
+17,Biff
+17,Fersk champignon
+17,Løk
+17,Oregano-dryss
+17,Skinketerninger
+17,Spekepepperoni
+18,Cherrytomater
+18,Løk
+18,Marinert kylling
+18,Skinketerninger
+19,Bacon
+19,Biff
+19,Skinke
+21,Jalapeños
+21,Løk
+21,Marinert kylling
+21,Nacho-chips
+21,Paprika
+22,Chiliflakes
+22,Chorizopölse
+22,Hvitløkskjøttboller
+22,Marinert pepperbiff
+22,Rødløk
+23,Cherrytomater
+23,Chiliflakes
+23,Crispy chilibacon
+23,Marinert kylling
+23,Skinke
+24,Chorizopölse
+24,Crispy chilibacon
+24,Hvitløkskjøttboller
+24,Marinert pepperbiff
+24,Skinke
