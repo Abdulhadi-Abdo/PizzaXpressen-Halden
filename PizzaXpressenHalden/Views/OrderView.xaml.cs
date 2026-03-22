@@ -15,7 +15,6 @@ public partial class OrderView : UserControl
         AddressSuggestionList.PreviewMouseLeftButtonUp += AddressSuggestionList_PreviewMouseLeftButtonUp;
         AddressSuggestionList.PreviewKeyDown += AddressSuggestionList_PreviewKeyDown;
 
-        // Stopper Enter fra å trigge PRINT globalt når du er i input-felter.
         PreviewKeyDown += OrderView_PreviewKeyDown;
     }
 
@@ -23,15 +22,12 @@ public partial class OrderView : UserControl
     {
         if (e.Key != Key.Enter) return;
 
-        // Tillat Enter hvis fokus er på PRINT-knappen (eller inni den)
         if (PrintButton != null && IsDescendantOf(Keyboard.FocusedElement as DependencyObject, PrintButton))
             return;
 
-        // Tillat Enter i forslag-lista (den håndteres i egen handler)
         if (IsDescendantOf(Keyboard.FocusedElement as DependencyObject, AddressSuggestionList))
             return;
 
-        // Ellers: Enter i felter skal IKKE printe / ikke trigge kommandoer
         var focused = Keyboard.FocusedElement;
         if (focused is TextBox ||
             focused is ComboBox ||
@@ -74,7 +70,7 @@ public partial class OrderView : UserControl
         if (DataContext is OrderViewModel vm && AddressSuggestionList.SelectedItem is string s)
         {
             vm.SelectAddressSuggestion(s);
-            e.Handled = true; // veldig viktig: hindrer at Enter går videre og printer
+            e.Handled = true;
             Keyboard.Focus(AddressBox);
         }
     }
