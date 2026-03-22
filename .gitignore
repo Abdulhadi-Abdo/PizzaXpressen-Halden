@@ -1,0 +1,13 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# SQLite database (runtime output)
+*.db
+*.db-shm
+*.db-wal
