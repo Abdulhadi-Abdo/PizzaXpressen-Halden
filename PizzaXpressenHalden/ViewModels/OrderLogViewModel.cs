@@ -1,4 +1,3 @@
-// File: ViewModels/OrderLogViewModel.cs
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
