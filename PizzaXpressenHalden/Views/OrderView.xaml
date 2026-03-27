@@ -191,7 +191,7 @@
                                                          FontSize="14"
                                                          HorizontalContentAlignment="Center"
                                                          VerticalContentAlignment="Center"
-                                                         MaxLength="1"/>
+                                                         MaxLength="4"/>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -437,11 +437,11 @@
                                Margin="0,0,0,12"/>
 
                     <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Standardingredienser markeres med x i toppinglisten."/>
+                               Text="• Standardingredienser markeres med x."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Skriv - for å fjerne en standardingrediens."/>
+                               Text="• Skriv - eller -- for å fjerne en standardingrediens."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Skriv + for å legge til ekstra topping."/>
+                               Text="• Skriv + eller ++ for å legge til ekstra topping."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}"
                                Text="• Delt pizza: skriv for eksempel D11/14 og bruk knappene 1 og 2 for å redigere hver halvdel."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}"

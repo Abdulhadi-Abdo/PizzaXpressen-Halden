@@ -240,58 +240,82 @@ public partial class OrderViewModel : ObservableObject
         var adds = IsSplitPizza ? (_activeHalf == 1 ? Half1Adds : Half2Adds) : ActiveAdds;
         var removes = IsSplitPizza ? (_activeHalf == 1 ? Half1Removes : Half2Removes) : ActiveRemoves;
 
+        var raw = (ti.Input ?? "").Trim().ToLowerInvariant();
         var baseHas = _currentBaseToppings.Contains(ti.Navn);
-        var v = (ti.Input ?? "").Trim().ToLowerInvariant();
 
-        if (v.Length == 0)
+        if (raw.Length == 0)
         {
-            if (adds.Contains(ti.Navn)) adds.Remove(ti.Navn);
-            if (removes.Contains(ti.Navn)) removes.Remove(ti.Navn);
-
-            if (baseHas)
-            {
-                _suppressToppingEvents = true;
-                ti.Input = "x";
-                _suppressToppingEvents = false;
-            }
-
+            adds.Remove(ti.Navn);
+            removes.Remove(ti.Navn);
             return;
         }
 
-        var c = v[0];
-
-        if (c == 'x')
+        if (raw.Any(ch => ch != 'x' && ch != '+' && ch != '-'))
         {
-            if (!baseHas)
-            {
-                _suppressToppingEvents = true;
-                ti.Input = "";
-                _suppressToppingEvents = false;
-                return;
-            }
-
-            if (adds.Contains(ti.Navn)) adds.Remove(ti.Navn);
-            if (removes.Contains(ti.Navn)) removes.Remove(ti.Navn);
+            _suppressToppingEvents = true;
+            ti.Input = baseHas ? "x" : "";
+            _suppressToppingEvents = false;
+            adds.Remove(ti.Navn);
+            removes.Remove(ti.Navn);
             return;
         }
 
-        if (c == '+')
-        {
-            if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
-            if (removes.Contains(ti.Navn)) removes.Remove(ti.Navn);
-            return;
-        }
-
-        if (c == '-')
+        if (raw.All(ch => ch == '-'))
         {
             if (!removes.Contains(ti.Navn)) removes.Add(ti.Navn);
-            if (adds.Contains(ti.Navn)) adds.Remove(ti.Navn);
+            adds.Remove(ti.Navn);
+            return;
+        }
+
+        if (raw.All(ch => ch == '+'))
+        {
+            if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
+            removes.Remove(ti.Navn);
+            return;
+        }
+
+        if (raw.All(ch => ch == 'x'))
+        {
+            if (baseHas)
+            {
+                if (raw.Length == 1)
+                {
+                    adds.Remove(ti.Navn);
+                    removes.Remove(ti.Navn);
+                }
+                else
+                {
+                    if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
+                    removes.Remove(ti.Navn);
+                }
+            }
+            else
+            {
+                if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
+                removes.Remove(ti.Navn);
+            }
+            return;
+        }
+
+        if (raw.All(ch => ch == 'x' || ch == '+'))
+        {
+            if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
+            removes.Remove(ti.Navn);
+            return;
+        }
+
+        if (raw.All(ch => ch == 'x' || ch == '-'))
+        {
+            if (!removes.Contains(ti.Navn)) removes.Add(ti.Navn);
+            adds.Remove(ti.Navn);
             return;
         }
 
         _suppressToppingEvents = true;
         ti.Input = baseHas ? "x" : "";
         _suppressToppingEvents = false;
+        adds.Remove(ti.Navn);
+        removes.Remove(ti.Navn);
     }
 
     private void CatalogInputChanged(object? sender, PropertyChangedEventArgs e)
