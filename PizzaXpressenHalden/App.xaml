@@ -7,9 +7,11 @@
         <DataTemplate DataType="{x:Type vm:OrderViewModel}">
             <views:OrderView/>
         </DataTemplate>
+
         <DataTemplate DataType="{x:Type vm:PizzaRegisterViewModel}">
             <views:PizzaRegisterView/>
         </DataTemplate>
+
         <DataTemplate DataType="{x:Type vm:OrderLogViewModel}">
             <views:OrderLogView/>
         </DataTemplate>
