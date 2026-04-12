@@ -2,10 +2,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PizzaXpressenHalden.ViewModels;
+using PizzaXpressenHalden.Views;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Navigation;
+using System.Windows.Controls;
 
 namespace PizzaXpressenHalden;
 
@@ -16,6 +18,8 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        AddViewModelTemplates();
 
         _host = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
@@ -51,6 +55,31 @@ public partial class App : Application
         mainWindow.Show();
     }
 
+    private void AddViewModelTemplates()
+    {
+        Resources.Add(
+            new DataTemplateKey(typeof(OrderViewModel)),
+            CreateTemplate(typeof(OrderView)));
+
+        Resources.Add(
+            new DataTemplateKey(typeof(PizzaRegisterViewModel)),
+            CreateTemplate(typeof(PizzaRegisterView)));
+
+        Resources.Add(
+            new DataTemplateKey(typeof(OrderLogViewModel)),
+            CreateTemplate(typeof(OrderLogView)));
+    }
+
+    private static DataTemplate CreateTemplate(Type viewType)
+    {
+        var factory = new FrameworkElementFactory(viewType);
+
+        return new DataTemplate
+        {
+            VisualTree = factory
+        };
+    }
+
     protected override async void OnExit(ExitEventArgs e)
     {
         if (_host != null)
@@ -58,6 +87,7 @@ public partial class App : Application
             await _host.StopAsync();
             _host.Dispose();
         }
+
         base.OnExit(e);
     }
 }

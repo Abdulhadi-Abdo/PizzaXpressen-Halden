@@ -64,14 +64,15 @@ public class PrintService
 
     private FlowDocument BuildCombinedDocument(Order order)
     {
-        var d = new FlowDocument();
-        d.PagePadding = new Thickness(12);
-        d.FontFamily = new FontFamily("Consolas");
-        d.FontSize = 11;
-        d.ColumnWidth = double.PositiveInfinity;
-
-        d.PageWidth = MmToPx(105);
-        d.PageHeight = MmToPx(297);
+        var d = new FlowDocument
+        {
+            PagePadding = new Thickness(12),
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 11,
+            ColumnWidth = double.PositiveInfinity,
+            PageWidth = MmToPx(105),
+            PageHeight = MmToPx(297)
+        };
 
         d.Blocks.Add(BuildKitchenBlock(order));
         d.Blocks.Add(SeparatorBlock());
@@ -137,8 +138,6 @@ public class PrintService
         foreach (var it in order.Items.Where(x => !IsPizzaLine(x) && x.PizzaId == null && x.ItemName != "Kj.tillegg"))
         {
             lines.Add($"{it.Quantity} {it.ItemName}");
-            if (!string.IsNullOrWhiteSpace(it.Note))
-                lines.Add($"  {it.Note}");
         }
 
         return MonoBlock(lines, true);
@@ -371,9 +370,7 @@ public class PrintService
 
         var userNotes = GetUserNotes(order);
         if (!string.IsNullOrWhiteSpace(userNotes))
-        {
             section.Blocks.Add(MonoBlock(new List<string> { "Merknader:", userNotes, "" }, true));
-        }
 
         foreach (var it in order.Items)
         {
@@ -393,14 +390,15 @@ public class PrintService
     {
         try
         {
-            var img = new Image();
-            img.Source = new BitmapImage(new Uri("pack://application:,,,/Assets/logo.png"));
-            img.Width = 240;
-            img.Stretch = Stretch.Uniform;
-            img.HorizontalAlignment = HorizontalAlignment.Center;
+            var img = new Image
+            {
+                Source = new BitmapImage(new Uri("pack://application:,,,/Assets/logo.png")),
+                Width = 240,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
 
-            var c = new BlockUIContainer(img);
-            c.Margin = new Thickness(0, 6, 0, 6);
+            var c = new BlockUIContainer(img) { Margin = new Thickness(0, 6, 0, 6) };
             return c;
         }
         catch
@@ -504,9 +502,8 @@ public class PrintService
 
         using var gen = new QRCodeGenerator();
         using var data = gen.CreateQrCode(url, QRCodeGenerator.ECCLevel.Q);
-
         using var qr = new PngByteQRCode(data);
-        var bytes = qr.GetGraphic(pixelsPerModule: 6);
+        var bytes = qr.GetGraphic(6);
 
         var img = new BitmapImage();
         img.BeginInit();
@@ -536,8 +533,7 @@ public class PrintService
 
     private static Block MonoBlock(List<string> lines, bool boldTitle = false)
     {
-        var p = new Paragraph();
-        p.Margin = new Thickness(0);
+        var p = new Paragraph { Margin = new Thickness(0) };
 
         for (int i = 0; i < lines.Count; i++)
         {
@@ -555,13 +551,12 @@ public class PrintService
         left ??= "";
         right ??= "";
 
-        var maxLeft = 34;
+        const int maxLeft = 34;
         var l = left.Length > maxLeft ? left.Substring(0, maxLeft) : left;
         var pad = Math.Max(1, maxLeft - l.Length);
         var text = l + new string(' ', pad) + right;
 
-        var p = new Paragraph(new Run(text));
-        p.Margin = new Thickness(0);
+        var p = new Paragraph(new Run(text)) { Margin = new Thickness(0) };
         if (bold) p.FontWeight = FontWeights.Bold;
         return p;
     }
