@@ -13,7 +13,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace PizzaXpressenHalden.ViewModels;
+namespace PizzaXpressenHalden.ViewModels
+{
 
 public partial class OrderViewModel : ObservableObject
 {
@@ -975,4 +976,6 @@ public partial class OrderViewModel : ObservableObject
             }
         }
     }
+}
+
 }
