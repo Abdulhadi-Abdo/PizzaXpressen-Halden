@@ -1,19 +1,6 @@
 ﻿<Application x:Class="PizzaXpressenHalden.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:PizzaXpressenHalden.ViewModels"
-             xmlns:views="clr-namespace:PizzaXpressenHalden.Views">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
-        <DataTemplate DataType="{x:Type vm:OrderViewModel}">
-            <views:OrderView/>
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type vm:PizzaRegisterViewModel}">
-            <views:PizzaRegisterView/>
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type vm:OrderLogViewModel}">
-            <views:OrderLogView/>
-        </DataTemplate>
     </Application.Resources>
 </Application>

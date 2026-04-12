@@ -2,10 +2,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using PizzaXpressenHalden.ViewModels;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Navigation;
 
 namespace PizzaXpressenHalden;
 
@@ -58,6 +58,7 @@ public partial class App : Application
             await _host.StopAsync();
             _host.Dispose();
         }
+
         base.OnExit(e);
     }
 }
