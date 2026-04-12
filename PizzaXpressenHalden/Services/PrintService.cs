@@ -123,8 +123,14 @@ public class PrintService
         foreach (var it in order.Items.Where(IsPizzaLine))
         {
             lines.Add($"{it.Quantity} {it.ItemName}");
-            if (!string.IsNullOrWhiteSpace(it.Note))
-                lines.Add($"  {it.Note}");
+
+            var toppingLines = BuildKitchenToppingTable(it);
+            if (toppingLines.Count > 0)
+            {
+                foreach (var line in toppingLines)
+                    lines.Add(line);
+            }
+
             lines.Add("");
         }
 
@@ -136,6 +142,212 @@ public class PrintService
         }
 
         return MonoBlock(lines, true);
+    }
+
+    private List<string> BuildKitchenToppingTable(OrderItem item)
+    {
+        var result = new List<string>();
+
+        if ((item.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
+        {
+            result.AddRange(BuildSplitPizzaKitchenTable(item));
+            return result;
+        }
+
+        var baseToppings = new List<string>();
+
+        if (item.PizzaId.HasValue)
+        {
+            baseToppings = _db.Pizzas
+                .AsNoTracking()
+                .Where(p => p.Id == item.PizzaId.Value)
+                .Include(p => p.PizzaToppings)
+                .ThenInclude(pt => pt.Topping)
+                .SelectMany(p => p.PizzaToppings)
+                .OrderBy(pt => pt.Topping.Sortering)
+                .Select(pt => pt.Topping.Navn)
+                .ToList();
+        }
+
+        ParseStandardNote(item.Note, out var removes, out var adds);
+
+        var rows = new List<(string Mark, string Name)>();
+
+        foreach (var t in baseToppings)
+        {
+            if (removes.Contains(t, StringComparer.CurrentCultureIgnoreCase))
+                rows.Add(("-", t));
+            else
+                rows.Add(("x", t));
+        }
+
+        foreach (var t in adds)
+        {
+            rows.Add(("+", t));
+        }
+
+        result.AddRange(FormatMarkedToppings(rows));
+        return result;
+    }
+
+    private List<string> BuildSplitPizzaKitchenTable(OrderItem item)
+    {
+        var result = new List<string>();
+
+        var name = item.ItemName ?? "";
+        var m = Regex.Match(name, @"DELT\s+(\d+)\s*/\s*(\d+)", RegexOptions.IgnoreCase);
+        if (!m.Success)
+        {
+            if (!string.IsNullOrWhiteSpace(item.Note))
+                result.Add("  " + item.Note);
+            return result;
+        }
+
+        var nr1 = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+        var nr2 = int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
+
+        var pizza1 = _db.Pizzas
+            .AsNoTracking()
+            .Include(p => p.PizzaToppings)
+            .ThenInclude(pt => pt.Topping)
+            .FirstOrDefault(p => p.Nummer == nr1);
+
+        var pizza2 = _db.Pizzas
+            .AsNoTracking()
+            .Include(p => p.PizzaToppings)
+            .ThenInclude(pt => pt.Topping)
+            .FirstOrDefault(p => p.Nummer == nr2);
+
+        ParseSplitNote(item.Note, out var half1Removes, out var half1Adds, out var half2Removes, out var half2Adds);
+
+        if (pizza1 != null)
+        {
+            result.Add($"  HALVDEL 1 - {pizza1.Nummer} {pizza1.Navn}");
+            var rows1 = new List<(string Mark, string Name)>();
+
+            foreach (var t in pizza1.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
+            {
+                if (half1Removes.Contains(t, StringComparer.CurrentCultureIgnoreCase))
+                    rows1.Add(("-", t));
+                else
+                    rows1.Add(("x", t));
+            }
+
+            foreach (var t in half1Adds)
+                rows1.Add(("+", t));
+
+            result.AddRange(FormatMarkedToppings(rows1, "    "));
+        }
+
+        if (pizza2 != null)
+        {
+            result.Add($"  HALVDEL 2 - {pizza2.Nummer} {pizza2.Navn}");
+            var rows2 = new List<(string Mark, string Name)>();
+
+            foreach (var t in pizza2.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
+            {
+                if (half2Removes.Contains(t, StringComparer.CurrentCultureIgnoreCase))
+                    rows2.Add(("-", t));
+                else
+                    rows2.Add(("x", t));
+            }
+
+            foreach (var t in half2Adds)
+                rows2.Add(("+", t));
+
+            result.AddRange(FormatMarkedToppings(rows2, "    "));
+        }
+
+        return result;
+    }
+
+    private static List<string> FormatMarkedToppings(List<(string Mark, string Name)> rows, string indent = "  ")
+    {
+        var result = new List<string>();
+        if (rows.Count == 0) return result;
+
+        const int columns = 3;
+        const int colWidth = 18;
+
+        for (int i = 0; i < rows.Count; i += columns)
+        {
+            var chunk = rows.Skip(i).Take(columns).ToList();
+            var line = indent;
+
+            for (int j = 0; j < chunk.Count; j++)
+            {
+                var text = $"{chunk[j].Mark} {chunk[j].Name}";
+                if (j < chunk.Count - 1)
+                    line += text.PadRight(colWidth);
+                else
+                    line += text;
+            }
+
+            result.Add(line);
+        }
+
+        return result;
+    }
+
+    private static void ParseStandardNote(string? note, out List<string> removes, out List<string> adds)
+    {
+        removes = new List<string>();
+        adds = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(note)) return;
+
+        var parts = note.Split('|').Select(x => x.Trim()).ToList();
+
+        foreach (var p in parts)
+        {
+            if (p.StartsWith("Uten:", StringComparison.CurrentCultureIgnoreCase))
+            {
+                var s = p.Substring(5).Trim();
+                removes = s.Split(',')
+                    .Select(x => x.Trim())
+                    .Where(x => x.Length > 0)
+                    .ToList();
+            }
+            else if (p.StartsWith("Ekstra:", StringComparison.CurrentCultureIgnoreCase))
+            {
+                var s = p.Substring(7).Trim();
+                adds = s.Split(',')
+                    .Select(x => x.Trim())
+                    .Where(x => x.Length > 0)
+                    .ToList();
+            }
+        }
+    }
+
+    private static void ParseSplitNote(
+        string? note,
+        out List<string> half1Removes,
+        out List<string> half1Adds,
+        out List<string> half2Removes,
+        out List<string> half2Adds)
+    {
+        half1Removes = new List<string>();
+        half1Adds = new List<string>();
+        half2Removes = new List<string>();
+        half2Adds = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(note)) return;
+
+        var parts = note.Split(new[] { "||" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .ToList();
+
+        foreach (var part in parts)
+        {
+            if (part.StartsWith("1:", StringComparison.CurrentCultureIgnoreCase))
+            {
+                ParseStandardNote(part.Substring(2).Trim(), out half1Removes, out half1Adds);
+            }
+            else if (part.StartsWith("2:", StringComparison.CurrentCultureIgnoreCase))
+            {
+                ParseStandardNote(part.Substring(2).Trim(), out half2Removes, out half2Adds);
+            }
+        }
     }
 
     private static Block BuildReceiptBlock(Order order)
