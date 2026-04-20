@@ -40,8 +40,8 @@ public class PrintService
     {
         var queue = LocalPrintServer.GetDefaultPrintQueue();
 
-        var width = MmToPx(105);
-        var height = MmToPx(297);
+        var width = MmToPx(210);   
+        var height = MmToPx(297); 
 
         var ticket = queue.DefaultPrintTicket;
         ticket.PageMediaSize = new PageMediaSize(width, height);
@@ -64,14 +64,23 @@ public class PrintService
 
     private FlowDocument BuildCombinedDocument(Order order)
     {
+        var a4Width = MmToPx(210);
+        var a4Height = MmToPx(297);
+
+        var receiptWidth = MmToPx(105);
+        var topBottomPadding = 12.0;
+        var rightPadding = 12.0;
+
+        var leftPadding = a4Width - receiptWidth - rightPadding;
+
         var d = new FlowDocument
         {
-            PagePadding = new Thickness(12),
+            PageWidth = a4Width,
+            PageHeight = a4Height,
+            PagePadding = new Thickness(leftPadding, topBottomPadding, rightPadding, topBottomPadding),
+            ColumnWidth = receiptWidth,
             FontFamily = new FontFamily("Consolas"),
-            FontSize = 11,
-            ColumnWidth = double.PositiveInfinity,
-            PageWidth = MmToPx(105),
-            PageHeight = MmToPx(297)
+            FontSize = 11
         };
 
         d.Blocks.Add(BuildKitchenBlock(order));
