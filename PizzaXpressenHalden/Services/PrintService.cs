@@ -68,7 +68,7 @@ public class PrintService
         var a4Height = MmToPx(297);
 
         var receiptWidth = MmToPx(105);
-        var topBottomPadding = 8.0;
+        var topPadding = 10.0;
         var rightPadding = 10.0;
         var leftPadding = a4Width - receiptWidth - rightPadding;
 
@@ -76,17 +76,30 @@ public class PrintService
         {
             PageWidth = a4Width,
             PageHeight = a4Height,
-            PagePadding = new Thickness(leftPadding, topBottomPadding, rightPadding, topBottomPadding),
+            PagePadding = new Thickness(leftPadding, topPadding, rightPadding, 10),
             ColumnWidth = receiptWidth,
             FontFamily = new FontFamily("Consolas"),
             FontSize = 11
         };
 
-        d.Blocks.Add(BuildKitchenBlock(order));
-        d.Blocks.Add(BuildReceiptBlock(order));
+        var kitchen = BuildKitchenBlock(order);
+        var receipt = BuildReceiptBlock(order);
+        var driver = order.DeliveryType == DeliveryType.Delivery ? BuildDriverBlock(order) : null;
 
-        if (order.DeliveryType == DeliveryType.Delivery)
-            d.Blocks.Add(BuildDriverBlock(order));
+        if (kitchen is Section ks) ks.Margin = new Thickness(0, 0, 0, 200);
+        if (kitchen is Paragraph kp) kp.Margin = new Thickness(0, 0, 0, 200);
+
+        if (receipt is Section rs) rs.Margin = new Thickness(0, 0, 0, 300);
+        if (receipt is Paragraph rp) rp.Margin = new Thickness(0, 0, 0, 300);
+
+        if (driver is Section ds) ds.Margin = new Thickness(0, 0, 0, 0);
+        if (driver is Paragraph dp) dp.Margin = new Thickness(0, 0, 0, 0);
+
+        d.Blocks.Add(kitchen);
+        d.Blocks.Add(receipt);
+
+        if (driver != null)
+            d.Blocks.Add(driver);
 
         return d;
     }
@@ -102,7 +115,7 @@ public class PrintService
 
         var section = new Section
         {
-            Margin = new Thickness(0, 0, 0, 3)
+            Margin = new Thickness(0)
         };
 
         var headerLines = new List<string>
@@ -178,7 +191,7 @@ public class PrintService
         group.Rows.Add(header1);
 
         var header2 = new TableRow();
-        header2.Cells.Add(CreateCell("", false, true));
+        header2.Cells.Add(CreateCell("Str", false, true));
         header2.Cells.Add(CreateCell(size, false, true));
         group.Rows.Add(header2);
 
@@ -254,7 +267,7 @@ public class PrintService
         group.Rows.Add(header1);
 
         var header2 = new TableRow();
-        header2.Cells.Add(CreateCell("", false, true));
+        header2.Cells.Add(CreateCell("Str", false, true));
         header2.Cells.Add(CreateCell(size, false, true));
         group.Rows.Add(header2);
 
@@ -316,8 +329,12 @@ public class PrintService
     {
         var section = new Section
         {
-            Margin = new Thickness(0, 2, 0, 3)
+            Margin = new Thickness(0)
         };
+
+        var logo = TryLogoBlock();
+        if (logo != null)
+            section.Blocks.Add(logo);
 
         section.Blocks.Add(MonoBlock(new List<string>
         {
@@ -326,9 +343,7 @@ public class PrintService
             "halden@pizzaxpressen.no"
         }, true));
 
-        var logo = TryLogoBlock();
-        if (logo != null)
-            section.Blocks.Add(logo);
+        section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 2, 0, 2) });
 
         var scheduled = GetScheduledLocal(order);
         var type = order.DeliveryType == DeliveryType.Delivery ? "Bringes" : "Hentes";
@@ -347,7 +362,7 @@ public class PrintService
         }
 
         var total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
-        section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 1, 0, 1) });
+        section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 2, 0, 2) });
         section.Blocks.Add(MonoLine("Pris:", total.ToString("0.00", CultureInfo.InvariantCulture), true));
 
         return section;
@@ -396,13 +411,13 @@ public class PrintService
             section.Blocks.Add(MonoLine($"{it.Quantity} {DisplayItemName(it.ItemName)}", ""));
 
         var total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
-        section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 1, 0, 1) });
+        section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 2, 0, 2) });
         section.Blocks.Add(MonoLine("Pris:", total.ToString("0.00", CultureInfo.InvariantCulture), true));
 
         var qrBlock = BuildQrBlockForAddress(address);
         if (qrBlock != null)
         {
-            section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 2, 0, 2) });
+            section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 4, 0, 4) });
             section.Blocks.Add(qrBlock);
         }
 
@@ -604,7 +619,7 @@ public class PrintService
                 HorizontalAlignment = HorizontalAlignment.Center
             };
 
-            return new BlockUIContainer(img) { Margin = new Thickness(0, 4, 0, 4) };
+            return new BlockUIContainer(img) { Margin = new Thickness(0, 4, 0, 2) };
         }
         catch
         {
