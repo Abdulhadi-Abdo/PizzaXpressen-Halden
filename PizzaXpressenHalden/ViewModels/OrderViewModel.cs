@@ -241,13 +241,7 @@ public partial class OrderViewModel : ObservableObject
         LeftCatalogInputs.Clear();
         RightCatalogInputs.Clear();
 
-        foreach (var x in til.Concat(
-                     ex.Where(x =>
-                         x.Navn != "Kj.tillegg" &&
-                         x.Navn != "X-kjøtt" &&
-                         x.Navn != "X-Kjøtt" &&
-                         x.Navn != "X-ost" &&
-                         x.Navn != "X-Ost")))
+        foreach (var x in til.Concat(ex.Where(x => x.Navn != "Kj.tillegg")))
         {
             var ci = new CatalogInput(x.Navn, x.Pris);
             ci.PropertyChanged += CatalogInputChanged;

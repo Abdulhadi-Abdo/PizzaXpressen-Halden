@@ -1,2 +1,4 @@
-﻿navn,pris
-Kj.tillegg,89.0
+navn,pris,is_active
+Kj.tillegg,89,1
+X-Kjøtt,49,1
+X-Ost,39,1
