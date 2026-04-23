@@ -68,15 +68,15 @@ public class PrintService
         var a4Height = MmToPx(297);
 
         var receiptWidth = MmToPx(105);
+        var horizontalPadding = (a4Width - receiptWidth) / 2.0;
         var topPadding = 10.0;
-        var rightPadding = 10.0;
-        var leftPadding = a4Width - receiptWidth - rightPadding;
+        var bottomPadding = 10.0;
 
         var d = new FlowDocument
         {
             PageWidth = a4Width,
             PageHeight = a4Height,
-            PagePadding = new Thickness(leftPadding, topPadding, rightPadding, 10),
+            PagePadding = new Thickness(horizontalPadding, topPadding, horizontalPadding, bottomPadding),
             ColumnWidth = receiptWidth,
             FontFamily = new FontFamily("Consolas"),
             FontSize = 11
@@ -86,11 +86,11 @@ public class PrintService
         var receipt = BuildReceiptBlock(order);
         var driver = order.DeliveryType == DeliveryType.Delivery ? BuildDriverBlock(order) : null;
 
-        if (kitchen is Section ks) ks.Margin = new Thickness(0, 0, 0, 200);
-        if (kitchen is Paragraph kp) kp.Margin = new Thickness(0, 0, 0, 200);
+        if (kitchen is Section ks) ks.Margin = new Thickness(0, 0, 0, 90);
+        if (kitchen is Paragraph kp) kp.Margin = new Thickness(0, 0, 0, 90);
 
-        if (receipt is Section rs) rs.Margin = new Thickness(0, 0, 0, 300);
-        if (receipt is Paragraph rp) rp.Margin = new Thickness(0, 0, 0, 300);
+        if (receipt is Section rs) rs.Margin = new Thickness(0, 0, 0, 80);
+        if (receipt is Paragraph rp) rp.Margin = new Thickness(0, 0, 0, 80);
 
         if (driver is Section ds) ds.Margin = new Thickness(0, 0, 0, 0);
         if (driver is Paragraph dp) dp.Margin = new Thickness(0, 0, 0, 0);
@@ -128,14 +128,15 @@ public class PrintService
 
         section.Blocks.Add(MonoBlock(headerLines, true));
 
+        var matrix = BuildKitchenMatrixTable(order);
+        if (matrix != null)
+        {
+            section.Blocks.Add(matrix);
+            section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 3, 0, 3) });
+        }
+
         bool IsPizzaLine(OrderItem it)
             => it.PizzaId != null || (it.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase);
-
-        foreach (var pizzaItem in order.Items.Where(IsPizzaLine))
-        {
-            section.Blocks.Add(BuildKitchenPizzaTable(pizzaItem));
-            section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 2, 0, 2) });
-        }
 
         foreach (var it in order.Items.Where(x => !IsPizzaLine(x) && x.PizzaId == null && x.ItemName != "Kj.tillegg"))
         {
@@ -151,18 +152,94 @@ public class PrintService
         return section;
     }
 
-    private Block BuildKitchenPizzaTable(OrderItem item)
+    private Block? BuildKitchenMatrixTable(Order order)
     {
-        if ((item.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
-            return BuildKitchenSplitPizzaTable(item);
+        var pizzaItems = order.Items
+            .Where(it => it.PizzaId != null || (it.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
+        if (pizzaItems.Count == 0)
+            return null;
+
+        var columns = pizzaItems.Select(BuildKitchenColumn).ToList();
+
+        var toppingOrder = _db.Toppings
+            .AsNoTracking()
+            .OrderBy(x => x.Sortering)
+            .Select(x => x.Navn)
+            .ToList();
+
+        var allNames = new List<string>(toppingOrder);
+
+        foreach (var extraName in columns
+                     .SelectMany(c => c.Marks.Keys)
+                     .Where(x => !allNames.Contains(x, StringComparer.CurrentCultureIgnoreCase))
+                     .Distinct(StringComparer.CurrentCultureIgnoreCase))
+        {
+            allNames.Add(extraName);
+        }
+
+        var usedToppings = allNames
+            .Where(name => columns.Any(c => c.Marks.ContainsKey(name)))
+            .ToList();
+
+        var table = new Table
+        {
+            CellSpacing = 0,
+            Margin = new Thickness(0)
+        };
+
+        table.Columns.Add(new TableColumn { Width = new GridLength(110) });
+
+        foreach (var _ in columns)
+            table.Columns.Add(new TableColumn { Width = new GridLength(24) });
+
+        var group = new TableRowGroup();
+        table.RowGroups.Add(group);
+
+        var nrRow = new TableRow();
+        nrRow.Cells.Add(CreateCell("Nr", true, true));
+        foreach (var col in columns)
+            nrRow.Cells.Add(CreateCell(col.Number, true, true));
+        group.Rows.Add(nrRow);
+
+        var strRow = new TableRow();
+        strRow.Cells.Add(CreateCell("Str", false, true));
+        foreach (var col in columns)
+            strRow.Cells.Add(CreateCell(col.Size, false, true));
+        group.Rows.Add(strRow);
+
+        foreach (var topping in usedToppings)
+        {
+            var row = new TableRow();
+            row.Cells.Add(CreateCell(DisplayItemName(topping), false, true));
+
+            foreach (var col in columns)
+            {
+                var mark = col.Marks.TryGetValue(topping, out var value) ? value : "";
+                row.Cells.Add(CreateCell(mark, false, true));
+            }
+
+            group.Rows.Add(row);
+        }
+
+        return table;
+    }
+
+    private KitchenMatrixColumn BuildKitchenColumn(OrderItem item)
+    {
         ParsePizzaItemName(item.ItemName, out var pizzaNr, out var size, out _);
+
+        if ((item.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
+            return BuildKitchenSplitColumn(item, pizzaNr, size);
+
         ParseStandardNote(item.Note, out var removes, out var adds);
 
-        var baseToppings = new List<string>();
+        var marks = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+
         if (item.PizzaId.HasValue)
         {
-            baseToppings = _db.Pizzas
+            var baseToppings = _db.Pizzas
                 .AsNoTracking()
                 .Where(p => p.Id == item.PizzaId.Value)
                 .Include(p => p.PizzaToppings)
@@ -171,70 +248,42 @@ public class PrintService
                 .OrderBy(pt => pt.Topping.Sortering)
                 .Select(pt => pt.Topping.Navn)
                 .ToList();
-        }
 
-        var table = new Table
-        {
-            CellSpacing = 0,
-            Margin = new Thickness(0)
-        };
-
-        table.Columns.Add(new TableColumn { Width = new GridLength(120) });
-        table.Columns.Add(new TableColumn { Width = new GridLength(40) });
-
-        var group = new TableRowGroup();
-        table.RowGroups.Add(group);
-
-        var header1 = new TableRow();
-        header1.Cells.Add(CreateCell("Nr", true, true));
-        header1.Cells.Add(CreateCell(string.IsNullOrWhiteSpace(pizzaNr) ? DisplayItemName(item.ItemName) : pizzaNr, true, true));
-        group.Rows.Add(header1);
-
-        var header2 = new TableRow();
-        header2.Cells.Add(CreateCell("Str", false, true));
-        header2.Cells.Add(CreateCell(size, false, true));
-        group.Rows.Add(header2);
-
-        foreach (var topping in baseToppings)
-        {
-            var mark = removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
-            var row = new TableRow();
-            row.Cells.Add(CreateCell(DisplayItemName(topping), false, true));
-            row.Cells.Add(CreateCell(mark, false, true));
-            group.Rows.Add(row);
+            foreach (var topping in baseToppings)
+                marks[topping] = removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
         }
 
         foreach (var topping in adds)
-        {
-            var row = new TableRow();
-            row.Cells.Add(CreateCell(DisplayItemName(topping), false, true));
-            row.Cells.Add(CreateCell("x", false, true));
-            group.Rows.Add(row);
-        }
+            marks[topping] = "x";
 
-        return table;
+        return new KitchenMatrixColumn
+        {
+            Number = string.IsNullOrWhiteSpace(pizzaNr) ? "?" : pizzaNr,
+            Size = string.IsNullOrWhiteSpace(size) ? "" : size,
+            Marks = marks
+        };
     }
 
-    private Block BuildKitchenSplitPizzaTable(OrderItem item)
+    private KitchenMatrixColumn BuildKitchenSplitColumn(OrderItem item, string pizzaNr, string size)
     {
-        var section = new Section
-        {
-            Margin = new Thickness(0)
-        };
+        var marks = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
 
         var name = item.ItemName ?? "";
         var m = Regex.Match(name, @"DELT\s+(\d+)\s*/\s*(\d+)", RegexOptions.IgnoreCase);
 
         if (!m.Success)
         {
-            section.Blocks.Add(MonoBlock(new List<string> { DisplayItemName(name) }, false));
-            return section;
+            return new KitchenMatrixColumn
+            {
+                Number = string.IsNullOrWhiteSpace(pizzaNr) ? "D" : pizzaNr,
+                Size = string.IsNullOrWhiteSpace(size) ? "" : size,
+                Marks = marks
+            };
         }
 
         var nr1 = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
         var nr2 = int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
 
-        ParsePizzaItemName(item.ItemName, out _, out var size, out _);
         ParseSplitNote(item.Note, out var half1Removes, out var half1Adds, out var half2Removes, out var half2Adds);
 
         var pizza1 = _db.Pizzas
@@ -249,80 +298,35 @@ public class PrintService
             .ThenInclude(pt => pt.Topping)
             .FirstOrDefault(p => p.Nummer == nr2);
 
-        var table = new Table
-        {
-            CellSpacing = 0,
-            Margin = new Thickness(0)
-        };
-
-        table.Columns.Add(new TableColumn { Width = new GridLength(120) });
-        table.Columns.Add(new TableColumn { Width = new GridLength(40) });
-
-        var group = new TableRowGroup();
-        table.RowGroups.Add(group);
-
-        var header1 = new TableRow();
-        header1.Cells.Add(CreateCell("Nr", true, true));
-        header1.Cells.Add(CreateCell($"{nr1}/{nr2}", true, true));
-        group.Rows.Add(header1);
-
-        var header2 = new TableRow();
-        header2.Cells.Add(CreateCell("Str", false, true));
-        header2.Cells.Add(CreateCell(size, false, true));
-        group.Rows.Add(header2);
-
         if (pizza1 != null)
         {
-            var halfRow = new TableRow();
-            halfRow.Cells.Add(CreateCell($"1/2 {pizza1.Navn}", true, true));
-            halfRow.Cells.Add(CreateCell("", true, true));
-            group.Rows.Add(halfRow);
-
-            foreach (var topping in pizza1.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
-            {
-                var mark = half1Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
-                var row = new TableRow();
-                row.Cells.Add(CreateCell(DisplayItemName(topping), false, true));
-                row.Cells.Add(CreateCell(mark, false, true));
-                group.Rows.Add(row);
-            }
+            foreach (var topping in pizza1.PizzaToppings.Select(x => x.Topping.Navn))
+                marks[topping] = half1Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
 
             foreach (var topping in half1Adds)
-            {
-                var row = new TableRow();
-                row.Cells.Add(CreateCell(DisplayItemName(topping), false, true));
-                row.Cells.Add(CreateCell("x", false, true));
-                group.Rows.Add(row);
-            }
+                marks[topping] = "x";
         }
 
         if (pizza2 != null)
         {
-            var halfRow = new TableRow();
-            halfRow.Cells.Add(CreateCell($"1/2 {pizza2.Navn}", true, true));
-            halfRow.Cells.Add(CreateCell("", true, true));
-            group.Rows.Add(halfRow);
-
-            foreach (var topping in pizza2.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
+            foreach (var topping in pizza2.PizzaToppings.Select(x => x.Topping.Navn))
             {
-                var mark = half2Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
-                var row = new TableRow();
-                row.Cells.Add(CreateCell(DisplayItemName(topping), false, true));
-                row.Cells.Add(CreateCell(mark, false, true));
-                group.Rows.Add(row);
+                if (!marks.ContainsKey(topping))
+                    marks[topping] = half2Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
+                else if (marks[topping] != "x")
+                    marks[topping] = half2Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? marks[topping] : "x";
             }
 
             foreach (var topping in half2Adds)
-            {
-                var row = new TableRow();
-                row.Cells.Add(CreateCell(DisplayItemName(topping), false, true));
-                row.Cells.Add(CreateCell("x", false, true));
-                group.Rows.Add(row);
-            }
+                marks[topping] = "x";
         }
 
-        section.Blocks.Add(table);
-        return section;
+        return new KitchenMatrixColumn
+        {
+            Number = $"{nr1}/{nr2}",
+            Size = string.IsNullOrWhiteSpace(size) ? "" : size,
+            Marks = marks
+        };
     }
 
     private static Block BuildReceiptBlock(Order order)
@@ -688,4 +692,11 @@ public class PrintService
     }
 
     private static double MmToPx(double mm) => (mm / 25.4) * 96.0;
+
+    private sealed class KitchenMatrixColumn
+    {
+        public string Number { get; set; } = "";
+        public string Size { get; set; } = "";
+        public Dictionary<string, string> Marks { get; set; } = new(StringComparer.CurrentCultureIgnoreCase);
+    }
 }
