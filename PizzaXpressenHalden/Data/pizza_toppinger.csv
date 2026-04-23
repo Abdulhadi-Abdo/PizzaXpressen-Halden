@@ -1,31 +1,33 @@
-﻿navn,kjøkken_navn,sortering,justerbar
-Ananas,ANAN,100,1
-Bacon,BACO,100,1
-Biff,BIFF,100,1
-Cherrytomater,CHER,100,1
-Chiliflakes,CHIS,100,1
-Chorizopölse,CHOE,100,1
-Crispy chilibacon,CRIN,100,1
-Fersk champignon,FERN,100,1
-Flakes,FLAK,100,1
-Hvitløkskjøttboller,HVIR,100,1
-Jalapeños,JALS,100,1
-Kebabkjøtt,KEBT,100,1
-Kjøttdeig,KJØG,100,1
-Løk,LØK,100,1
-Mais,MAIS,100,1
-Marinert kylling,MARG,100,1
-Marinert pepperbiff,MARF,100,1
-Nacho-chips,NACS,100,1
-Oliven,OLIV,100,1
-Oregano-dryss,ORES,100,1
-Paprika,PAPA,100,1
-Peppermiks,PEPS,100,1
-Pepperoni,PEPI,100,1
-Rødløk,RØDL,100,1
-Salami,SALA,100,1
-Skinke,SKIN,100,1
-Skinketerninger,SKIR,100,1
-Spekepepperoni,SPEI,100,1
-Tacokjøtt,TACT,100,1
-Tandorimarinert kylling,TANG,100,1
+﻿navn,sortering
+Ananas,1
+Bacon,2
+Biff,3
+Cherrytomater,4
+Chiliflakes,5
+Chorizopølse,6
+Crispy chilibacon,7
+Fersk champignon,8
+Flakes,9
+Hvitløkskjøttboller,10
+Jalapeños,11
+Kebabkjøtt,12
+Kjøttdeig,13
+Løk,14
+Mais,15
+Marinert kylling,16
+Marinert pepperbiff,17
+Nacho-chips,18
+Oliven,19
+Oregano-dryss,20
+Paprika,21
+Peppermiks,22
+Pepperoni,23
+Rødløk,24
+Salami,25
+Skinke,26
+Skinketerninger,27
+Spekepepperoni,28
+Tacokjøtt,29
+Tandorimarinert kylling,30
+X-Kjøtt,31
+X-Ost,32
