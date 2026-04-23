@@ -31,6 +31,7 @@ public partial class OrderViewModel : ObservableObject
     private OrderItem? _editingOriginalLine;
 
     private readonly HashSet<string> _currentBaseToppings = new(StringComparer.CurrentCultureIgnoreCase);
+    private decimal _driverFeePrice = 85m;
 
     [ObservableProperty] private bool isSplitPizza;
     [ObservableProperty] private bool isInfoPopupOpen;
@@ -53,7 +54,9 @@ public partial class OrderViewModel : ObservableObject
     public ObservableCollection<string> Half2Removes { get; } = new();
 
     public ObservableCollection<ToppingInput> ToppingInputs { get; } = new();
-    public ObservableCollection<CatalogInput> CatalogInputs { get; } = new();
+
+    public ObservableCollection<CatalogInput> LeftCatalogInputs { get; } = new();
+    public ObservableCollection<CatalogInput> RightCatalogInputs { get; } = new();
 
     [ObservableProperty] private string pizzaNrText = "";
     [ObservableProperty] private string sizeText = "S";
@@ -78,8 +81,6 @@ public partial class OrderViewModel : ObservableObject
 
     [ObservableProperty] private string splitTitle = "";
     [ObservableProperty] private string activeHalfLabel = "";
-
-    private const decimal DriverFee = 85m;
 
     public IRelayCommand RemoveSelectedItemCommand { get; }
     public IRelayCommand SaveAndPrintCommand { get; }
@@ -213,16 +214,45 @@ public partial class OrderViewModel : ObservableObject
             ToppingInputs.Add(ti);
         }
 
-        var til = await _db.Tilbehor.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Id).Select(x => new { x.Navn, x.Pris }).ToListAsync();
-        var dr = await _db.Drinks.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Id).Select(x => new { x.Navn, x.Pris }).ToListAsync();
-        var ex = await _db.Extras.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Id).Select(x => new { x.Navn, x.Pris }).ToListAsync();
+        var til = await _db.Tilbehor
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Id)
+            .Select(x => new { x.Navn, x.Pris })
+            .ToListAsync();
 
-        CatalogInputs.Clear();
-        foreach (var x in til.Concat(dr).Concat(ex))
+        var dr = await _db.Drinks
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Id)
+            .Select(x => new { x.Navn, x.Pris })
+            .ToListAsync();
+
+        var ex = await _db.Extras
+            .AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Id)
+            .Select(x => new { x.Navn, x.Pris })
+            .ToListAsync();
+
+        var driverFee = ex.FirstOrDefault(x => x.Navn == "Kj.tillegg");
+        _driverFeePrice = driverFee?.Pris ?? 85m;
+
+        LeftCatalogInputs.Clear();
+        RightCatalogInputs.Clear();
+
+        foreach (var x in til.Concat(ex.Where(x => x.Navn != "Kj.tillegg")))
         {
             var ci = new CatalogInput(x.Navn, x.Pris);
             ci.PropertyChanged += CatalogInputChanged;
-            CatalogInputs.Add(ci);
+            LeftCatalogInputs.Add(ci);
+        }
+
+        foreach (var x in dr)
+        {
+            var ci = new CatalogInput(x.Navn, x.Pris);
+            ci.PropertyChanged += CatalogInputChanged;
+            RightCatalogInputs.Add(ci);
         }
 
         DeliveryType = DeliveryType.Delivery;
@@ -816,9 +846,13 @@ public partial class OrderViewModel : ObservableObject
                     PizzaId = null,
                     ItemName = "Kj.tillegg",
                     Quantity = 1,
-                    UnitPrice = DriverFee,
+                    UnitPrice = _driverFeePrice,
                     Note = null
                 });
+            }
+            else
+            {
+                feeLine.UnitPrice = _driverFeePrice;
             }
         }
         else
@@ -890,7 +924,10 @@ public partial class OrderViewModel : ObservableObject
 
         Items.Clear();
 
-        foreach (var ci in CatalogInputs)
+        foreach (var ci in LeftCatalogInputs)
+            ci.QuantityText = "";
+
+        foreach (var ci in RightCatalogInputs)
             ci.QuantityText = "";
 
         _suppressToppingEvents = true;
