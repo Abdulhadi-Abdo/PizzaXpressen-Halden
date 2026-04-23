@@ -55,7 +55,7 @@
                                            Margin="0,0,0,8"/>
 
                                 <UniformGrid Columns="2" Margin="0,0,0,8">
-                                    <TextBlock Text="Størrelse (S/M/L/G)" Foreground="#2b7a2b" FontSize="13"/>
+                                    <TextBlock Text="Størrelse (M/L/G)" Foreground="#2b7a2b" FontSize="13"/>
                                     <TextBox Text="{Binding SizeText, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="0"
@@ -223,36 +223,77 @@
                                        Foreground="#2b7a2b"
                                        Margin="0,0,0,6"/>
 
-                            <ItemsControl ItemsSource="{Binding CatalogInputs}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="2"/>
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="#e0e0e0" BorderThickness="1" Margin="2" Padding="4">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="50"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Navn}"
-                                                           FontSize="11"
-                                                           VerticalAlignment="Center"
-                                                           Margin="0,0,6,0"/>
-                                                <TextBox Grid.Column="1"
-                                                         Text="{Binding QuantityText, UpdateSourceTrigger=PropertyChanged}"
-                                                         FontSize="12"
-                                                         Height="22"
-                                                         Padding="2"
-                                                         HorizontalContentAlignment="Center"
-                                                         VerticalContentAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- VENSTRE: tilbehør + ekstra -->
+                                <ItemsControl Grid.Column="0" ItemsSource="{Binding LeftCatalogInputs}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="1"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="#e0e0e0" BorderThickness="1" Margin="2" Padding="4">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="50"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Navn}"
+                                                               FontSize="11"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,6,0"/>
+                                                    <TextBox Grid.Column="1"
+                                                             Text="{Binding QuantityText, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontSize="12"
+                                                             Height="22"
+                                                             Padding="2"
+                                                             HorizontalContentAlignment="Center"
+                                                             VerticalContentAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- HØYRE: drikke -->
+                                <ItemsControl Grid.Column="2" ItemsSource="{Binding RightCatalogInputs}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Columns="1"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="#e0e0e0" BorderThickness="1" Margin="2" Padding="4">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="50"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Navn}"
+                                                               FontSize="11"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,6,0"/>
+                                                    <TextBox Grid.Column="1"
+                                                             Text="{Binding QuantityText, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontSize="12"
+                                                             Height="22"
+                                                             Padding="2"
+                                                             HorizontalContentAlignment="Center"
+                                                             VerticalContentAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
