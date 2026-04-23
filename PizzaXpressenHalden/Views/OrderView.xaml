@@ -12,13 +12,16 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="12">
+    <Grid Margin="12"
+          KeyboardNavigation.TabNavigation="Continue"
+          KeyboardNavigation.DirectionalNavigation="Continue">
         <Border BorderBrush="#2b7a2b"
                 BorderThickness="2"
                 Padding="10"
                 CornerRadius="6"
                 Background="White">
-            <Grid>
+            <Grid KeyboardNavigation.TabNavigation="Continue"
+                  KeyboardNavigation.DirectionalNavigation="Continue">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -27,20 +30,24 @@
                 </Grid.RowDefinitions>
 
                 <!-- ROW 0 -->
-                <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid Grid.Row="0" Margin="0,0,0,10"
+                      KeyboardNavigation.TabNavigation="Continue"
+                      KeyboardNavigation.DirectionalNavigation="Continue">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2.0*"/>
                         <ColumnDefinition Width="4.0*"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- BESTILLING -->
-                    <Border Grid.Column="0"
+                    <Border x:Name="BestillingPanel"
+                            Grid.Column="0"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10"
                             Margin="0,0,10,0">
-                        <Grid>
+                        <Grid KeyboardNavigation.TabNavigation="Continue"
+                              KeyboardNavigation.DirectionalNavigation="Continue">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -56,19 +63,22 @@
 
                                 <UniformGrid Columns="2" Margin="0,0,0,8">
                                     <TextBlock Text="Størrelse (M/L/G)" Foreground="#2b7a2b" FontSize="13"/>
-                                    <TextBox Text="{Binding SizeText, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox x:Name="SizeBox"
+                                             Text="{Binding SizeText, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="0"
                                              CharacterCasing="Upper"/>
 
                                     <TextBlock Text="Pizza nr" Foreground="#2b7a2b" FontSize="13"/>
-                                    <TextBox Text="{Binding PizzaNrText, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox x:Name="PizzaNrBox"
+                                             Text="{Binding PizzaNrText, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="1"
                                              CharacterCasing="Upper"/>
 
                                     <TextBlock Text="Antall" Foreground="#2b7a2b" FontSize="13"/>
-                                    <TextBox Text="{Binding ActivePizzaQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox x:Name="AntallBox"
+                                             Text="{Binding ActivePizzaQuantity, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="2"/>
                                 </UniformGrid>
@@ -159,12 +169,14 @@
                     </Border>
 
                     <!-- TOPPING -->
-                    <Border Grid.Column="1"
+                    <Border x:Name="ToppingPanel"
+                            Grid.Column="1"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10">
-                        <StackPanel>
+                        <StackPanel KeyboardNavigation.TabNavigation="Continue"
+                                    KeyboardNavigation.DirectionalNavigation="Continue">
                             <TextBlock Text="TOPPING (+ / - / x)"
                                        FontSize="18"
                                        FontWeight="Bold"
@@ -202,7 +214,9 @@
                 </Grid>
 
                 <!-- ROW 1 -->
-                <Grid Grid.Row="1" Margin="0,0,0,10">
+                <Grid Grid.Row="1" Margin="0,0,0,10"
+                      KeyboardNavigation.TabNavigation="Continue"
+                      KeyboardNavigation.DirectionalNavigation="Continue">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1.85*"/>
                         <ColumnDefinition Width="1.15*"/>
@@ -210,33 +224,31 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- TILBEHØR -->
-                    <Border Grid.Column="0"
+                    <Border x:Name="TilbehorPanel"
+                            Grid.Column="0"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10"
                             Margin="0,0,10,0">
-                        <StackPanel>
+                        <StackPanel KeyboardNavigation.TabNavigation="Continue"
+                                    KeyboardNavigation.DirectionalNavigation="Continue">
                             <TextBlock Text="TILBEHØR (skriv antall i boksen)"
                                        FontSize="16"
                                        FontWeight="Bold"
                                        Foreground="#2b7a2b"
                                        Margin="0,0,0,6"/>
 
-                            <Grid>
+                            <Grid KeyboardNavigation.TabNavigation="Continue"
+                                  KeyboardNavigation.DirectionalNavigation="Continue">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="12"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- VENSTRE: tilbehør + ekstra -->
+                                <!-- Venstre -->
                                 <ItemsControl Grid.Column="0" ItemsSource="{Binding LeftCatalogInputs}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Columns="1"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border BorderBrush="#e0e0e0" BorderThickness="1" Margin="2" Padding="4">
@@ -262,13 +274,8 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <!-- HØYRE: drikke -->
+                                <!-- Høyre -->
                                 <ItemsControl Grid.Column="2" ItemsSource="{Binding RightCatalogInputs}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Columns="1"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border BorderBrush="#e0e0e0" BorderThickness="1" Margin="2" Padding="4">
@@ -298,13 +305,15 @@
                     </Border>
 
                     <!-- KUNDE -->
-                    <Border Grid.Column="1"
+                    <Border x:Name="KundePanel"
+                            Grid.Column="1"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10"
                             Margin="0,0,10,0">
-                        <StackPanel>
+                        <StackPanel KeyboardNavigation.TabNavigation="Continue"
+                                    KeyboardNavigation.DirectionalNavigation="Continue">
                             <TextBlock Text="KUNDE"
                                        FontSize="18"
                                        FontWeight="Bold"
@@ -348,19 +357,22 @@
                     </Border>
 
                     <!-- HANDLEKURV -->
-                    <Border Grid.Column="2"
+                    <Border x:Name="HandlekurvPanel"
+                            Grid.Column="2"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10">
-                        <StackPanel>
+                        <StackPanel KeyboardNavigation.TabNavigation="Continue"
+                                    KeyboardNavigation.DirectionalNavigation="Continue">
                             <TextBlock Text="HANDLEKURV"
                                        FontSize="18"
                                        FontWeight="Bold"
                                        Foreground="#2b7a2b"
                                        Margin="0,0,0,6"/>
 
-                            <DataGrid ItemsSource="{Binding Items}"
+                            <DataGrid x:Name="HandlekurvGrid"
+                                      ItemsSource="{Binding Items}"
                                       SelectedItem="{Binding SelectedItem}"
                                       AutoGenerateColumns="False"
                                       CanUserAddRows="False"
@@ -378,7 +390,8 @@
                             </DataGrid>
 
                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <Button Content="Rediger valgt pizza"
+                                <Button x:Name="EditPizzaButton"
+                                        Content="Rediger valgt pizza"
                                         Command="{Binding EditSelectedPizzaCommand}"
                                         Width="135"
                                         Height="26"
@@ -386,7 +399,8 @@
                                         Margin="0,0,10,0"
                                         FontSize="12"
                                         TabIndex="41"/>
-                                <Button Content="Fjern valgt"
+                                <Button x:Name="RemoveItemButton"
+                                        Content="Fjern valgt"
                                         Command="{Binding RemoveSelectedItemCommand}"
                                         Width="110"
                                         Height="26"
@@ -406,9 +420,11 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="MERKNADER" FontSize="14" FontWeight="Bold" Foreground="#2b7a2b" Margin="0,0,0,6"/>
-                        <TextBox Grid.Row="1"
+                        <TextBox x:Name="NotesBox"
+                                 Grid.Row="1"
                                  Text="{Binding OrderNotesText, UpdateSourceTrigger=PropertyChanged}"
                                  AcceptsReturn="True"
+                                 AcceptsTab="True"
                                  TextWrapping="Wrap"
                                  Height="55"
                                  VerticalScrollBarVisibility="Auto"/>
