@@ -12,6 +12,10 @@
         </Style>
     </UserControl.Resources>
 
+    <UserControl.InputBindings>
+        <KeyBinding Key="PageDown" Command="{Binding AddOrUpdatePizzaCommand}"/>
+    </UserControl.InputBindings>
+
     <Grid Margin="12"
           KeyboardNavigation.TabNavigation="Continue"
           KeyboardNavigation.DirectionalNavigation="Continue">
@@ -389,6 +393,7 @@
                                         Margin="0,0,10,0"
                                         FontSize="12"
                                         TabIndex="41"/>
+
                                 <Button x:Name="RemoveItemButton"
                                         Content="Fjern valgt"
                                         Command="{Binding RemoveSelectedItemCommand}"
@@ -480,18 +485,13 @@
                                Foreground="#2b7a2b"
                                Margin="0,0,0,12"/>
 
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Standardingredienser markeres med x."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Skriv - eller -- for å fjerne en standardingrediens."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Skriv + eller ++ for å legge til ekstra topping."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Delt pizza: skriv for eksempel D11/14 og bruk knappene 1 og 2 for å redigere hver halvdel."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Tilbehør legges automatisk i handlekurven når antall skrives inn."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Trykk PRINT når bestillingen er ferdig kontrollert."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Standardingredienser markeres med x."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Skriv - eller -- for å fjerne en standardingrediens."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Skriv + eller ++ for å legge til ekstra topping."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Delt pizza: skriv for eksempel D11/14 og bruk knappene 1 og 2 for å redigere hver halvdel."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Tilbehør legges automatisk i handlekurven når antall skrives inn."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• PageDown legger til pizza, og PageUp redigerer pizza."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Trykk PRINT når bestillingen er ferdig kontrollert."/>
 
                     <Button Content="Lukk"
                             Command="{Binding ToggleInfoPopupCommand}"

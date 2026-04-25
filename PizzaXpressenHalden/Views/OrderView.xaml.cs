@@ -1,10 +1,12 @@
 using PizzaXpressenHalden.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace PizzaXpressenHalden.Views;
 
@@ -14,10 +16,67 @@ public partial class OrderView : UserControl
     {
         InitializeComponent();
 
+        Loaded += OrderView_Loaded;
+
         AddressSuggestionList.PreviewMouseLeftButtonUp += AddressSuggestionList_PreviewMouseLeftButtonUp;
         AddressSuggestionList.PreviewKeyDown += AddressSuggestionList_PreviewKeyDown;
 
         PreviewKeyDown += OrderView_PreviewKeyDown;
+
+        if (PrintButton != null)
+            PrintButton.Click += PrintButton_Click;
+    }
+
+    private void OrderView_Loaded(object sender, RoutedEventArgs e)
+    {
+        foreach (var tb in FindVisualChildren<TextBox>(this))
+        {
+            if (tb == NotesBox)
+                continue;
+
+            tb.GotKeyboardFocus -= TextBox_GotKeyboardFocus_SelectAll;
+            tb.GotKeyboardFocus += TextBox_GotKeyboardFocus_SelectAll;
+
+            tb.PreviewMouseLeftButtonDown -= TextBox_PreviewMouseLeftButtonDown_SelectivelyIgnore;
+            tb.PreviewMouseLeftButtonDown += TextBox_PreviewMouseLeftButtonDown_SelectivelyIgnore;
+        }
+
+        FocusSizeBox();
+    }
+
+    private void PrintButton_Click(object sender, RoutedEventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            FocusSizeBox();
+        }), DispatcherPriority.ApplicationIdle);
+    }
+
+    private void FocusSizeBox()
+    {
+        if (SizeBox == null)
+            return;
+
+        SizeBox.Focus();
+        SizeBox.SelectAll();
+    }
+
+    private void TextBox_GotKeyboardFocus_SelectAll(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is TextBox tb && !tb.AcceptsReturn)
+            tb.SelectAll();
+    }
+
+    private void TextBox_PreviewMouseLeftButtonDown_SelectivelyIgnore(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not TextBox tb)
+            return;
+
+        if (!tb.IsKeyboardFocusWithin)
+        {
+            e.Handled = true;
+            tb.Focus();
+        }
     }
 
     private void OrderView_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -26,27 +85,78 @@ public partial class OrderView : UserControl
         if (focused == null)
             return;
 
-        // Merknader skal beholde Enter som ny linje
-        if (e.Key == Key.Enter && focused is TextBox notesTb && notesTb.AcceptsReturn)
+        if (focused is TextBox notesTb && notesTb.AcceptsReturn && e.Key == Key.Enter)
             return;
 
-        // Adresseforslag skal beholde egen oppførsel
         if (IsDescendantOf(focused, AddressSuggestionList))
             return;
 
-        // Ikke overstyr printknappen
         if (PrintButton != null && IsDescendantOf(focused, PrintButton))
-            return;
+        {
+            if (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down)
+                e.Handled = true;
 
-        // PILER = flytt mellom bokser
+            return;
+        }
+
+        if (e.Key == Key.PageDown)
+        {
+            if (DataContext is OrderViewModel vm && vm.AddOrUpdatePizzaCommand.CanExecute(null))
+            {
+                e.Handled = true;
+                vm.AddOrUpdatePizzaCommand.Execute(null);
+            }
+            return;
+        }
+
+        if (e.Key == Key.PageUp)
+        {
+            if (DataContext is OrderViewModel vm)
+            {
+                e.Handled = true;
+
+                if (vm.SelectedItem == null || vm.SelectedItem.PizzaId == null)
+                {
+                    var lastPizza = vm.Items.LastOrDefault(x => x.PizzaId != null);
+                    if (lastPizza != null)
+                        vm.SelectedItem = lastPizza;
+                }
+
+                if (vm.EditSelectedPizzaCommand.CanExecute(null))
+                    vm.EditSelectedPizzaCommand.Execute(null);
+            }
+            return;
+        }
+
         if (e.Key == Key.Left || e.Key == Key.Right || e.Key == Key.Up || e.Key == Key.Down)
         {
-            // Ikke stjel piler i store felt / spesielle felt
             if (focused == NotesBox || IsDescendantOf(focused, NotesBox))
                 return;
 
-            if (focused == AddressSuggestionList || IsDescendantOf(focused, AddressSuggestionList))
-                return;
+            if (focused is TextBox tb && !tb.AcceptsReturn)
+            {
+                var textLength = tb.Text?.Length ?? 0;
+                var caret = tb.CaretIndex;
+                var hasSelection = tb.SelectionLength > 0;
+
+                if (e.Key == Key.Left)
+                {
+                    if (hasSelection)
+                        return;
+
+                    if (caret > 0)
+                        return;
+                }
+
+                if (e.Key == Key.Right)
+                {
+                    if (hasSelection)
+                        return;
+
+                    if (caret < textLength)
+                        return;
+                }
+            }
 
             e.Handled = true;
 
@@ -61,7 +171,9 @@ public partial class OrderView : UserControl
                     _ => FocusNavigationDirection.Next
                 };
 
-                element.MoveFocus(new TraversalRequest(direction));
+                var request = new TraversalRequest(direction);
+                if (element.MoveFocus(request))
+                    SelectAllIfTextBox(Keyboard.FocusedElement);
             }
 
             return;
@@ -70,7 +182,6 @@ public partial class OrderView : UserControl
         if (e.Key != Key.Enter)
             return;
 
-        // ENTER = hopp mellom seksjoner
         if (IsInBestillingArea(focused))
         {
             e.Handled = true;
@@ -95,13 +206,6 @@ public partial class OrderView : UserControl
         if (IsDescendantOf(focused, KundePanel))
         {
             e.Handled = true;
-            FocusHandlekurvArea();
-            return;
-        }
-
-        if (IsDescendantOf(focused, HandlekurvPanel))
-        {
-            e.Handled = true;
             NotesBox.Focus();
             NotesBox.CaretIndex = NotesBox.Text?.Length ?? 0;
             return;
@@ -124,12 +228,15 @@ public partial class OrderView : UserControl
 
     private static bool IsDescendantOf(DependencyObject? focused, DependencyObject? ancestor)
     {
-        if (focused == null || ancestor == null) return false;
+        if (focused == null || ancestor == null)
+            return false;
 
         var cur = focused;
         while (cur != null)
         {
-            if (ReferenceEquals(cur, ancestor)) return true;
+            if (ReferenceEquals(cur, ancestor))
+                return true;
+
             cur = VisualTreeHelper.GetParent(cur);
         }
 
@@ -148,24 +255,10 @@ public partial class OrderView : UserControl
         }
     }
 
-    private void FocusHandlekurvArea()
+    private static void SelectAllIfTextBox(object? focusedElement)
     {
-        if (HandlekurvGrid != null && HandlekurvGrid.Items.Count > 0)
-        {
-            HandlekurvGrid.Focus();
-            return;
-        }
-
-        if (EditPizzaButton != null && EditPizzaButton.IsEnabled && EditPizzaButton.IsVisible)
-        {
-            EditPizzaButton.Focus();
-            return;
-        }
-
-        if (RemoveItemButton != null && RemoveItemButton.IsEnabled && RemoveItemButton.IsVisible)
-        {
-            RemoveItemButton.Focus();
-        }
+        if (focusedElement is TextBox tb && !tb.AcceptsReturn)
+            tb.SelectAll();
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
@@ -196,7 +289,8 @@ public partial class OrderView : UserControl
 
     private void AddressSuggestionList_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter) return;
+        if (e.Key != Key.Enter)
+            return;
 
         if (DataContext is OrderViewModel vm && AddressSuggestionList.SelectedItem is string s)
         {
