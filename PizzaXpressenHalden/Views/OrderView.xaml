@@ -29,7 +29,6 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- ROW 0 -->
                 <Grid Grid.Row="0" Margin="0,0,0,10"
                       KeyboardNavigation.TabNavigation="Continue"
                       KeyboardNavigation.DirectionalNavigation="Continue">
@@ -38,7 +37,6 @@
                         <ColumnDefinition Width="4.0*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- BESTILLING -->
                     <Border x:Name="BestillingPanel"
                             Grid.Column="0"
                             BorderBrush="#2b7a2b"
@@ -93,7 +91,6 @@
                                            Margin="0,0,0,4"/>
                             </StackPanel>
 
-                            <!-- Ingredienser -->
                             <Border Grid.Row="1"
                                     BorderBrush="#d9d9d9"
                                     BorderThickness="1"
@@ -168,7 +165,6 @@
                         </Grid>
                     </Border>
 
-                    <!-- TOPPING -->
                     <Border x:Name="ToppingPanel"
                             Grid.Column="1"
                             BorderBrush="#2b7a2b"
@@ -213,7 +209,6 @@
                     </Border>
                 </Grid>
 
-                <!-- ROW 1 -->
                 <Grid Grid.Row="1" Margin="0,0,0,10"
                       KeyboardNavigation.TabNavigation="Continue"
                       KeyboardNavigation.DirectionalNavigation="Continue">
@@ -223,7 +218,6 @@
                         <ColumnDefinition Width="2.70*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- TILBEHØR -->
                     <Border x:Name="TilbehorPanel"
                             Grid.Column="0"
                             BorderBrush="#2b7a2b"
@@ -247,7 +241,6 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- Venstre -->
                                 <ItemsControl Grid.Column="0" ItemsSource="{Binding LeftCatalogInputs}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -274,7 +267,6 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <!-- Høyre -->
                                 <ItemsControl Grid.Column="2" ItemsSource="{Binding RightCatalogInputs}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -304,7 +296,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- KUNDE -->
                     <Border x:Name="KundePanel"
                             Grid.Column="1"
                             BorderBrush="#2b7a2b"
@@ -356,7 +347,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- HANDLEKURV -->
                     <Border x:Name="HandlekurvPanel"
                             Grid.Column="2"
                             BorderBrush="#2b7a2b"
@@ -412,7 +402,6 @@
                     </Border>
                 </Grid>
 
-                <!-- MERKNADER -->
                 <Border Grid.Row="2" BorderBrush="#2b7a2b" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,0,0,8">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -431,7 +420,6 @@
                     </Grid>
                 </Border>
 
-                <!-- TOTAL + PRINT + INFO ICON -->
                 <Grid Grid.Row="3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -473,7 +461,6 @@
             </Grid>
         </Border>
 
-        <!-- INFO POPUP -->
         <Grid Visibility="{Binding IsInfoPopupOpen, Converter={StaticResource BoolToVis}}"
               Background="#80000000"
               Panel.ZIndex="100">

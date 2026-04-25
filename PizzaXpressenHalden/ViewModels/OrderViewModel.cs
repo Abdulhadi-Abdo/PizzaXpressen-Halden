@@ -31,7 +31,7 @@ public partial class OrderViewModel : ObservableObject
     private OrderItem? _editingOriginalLine;
 
     private readonly HashSet<string> _currentBaseToppings = new(StringComparer.CurrentCultureIgnoreCase);
-    private decimal _driverFeePrice = 89m;
+    private decimal _driverFeePrice = 85m;
 
     [ObservableProperty] private bool isSplitPizza;
     [ObservableProperty] private bool isInfoPopupOpen;
@@ -59,7 +59,7 @@ public partial class OrderViewModel : ObservableObject
     public ObservableCollection<CatalogInput> RightCatalogInputs { get; } = new();
 
     [ObservableProperty] private string pizzaNrText = "";
-    [ObservableProperty] private string sizeText = "M";
+    [ObservableProperty] private string sizeText = "";
     [ObservableProperty] private int activePizzaQuantity = 1;
 
     [ObservableProperty] private string phone = "";
@@ -236,7 +236,7 @@ public partial class OrderViewModel : ObservableObject
             .ToListAsync();
 
         var driverFee = ex.FirstOrDefault(x => x.Navn == "Kj.tillegg");
-        _driverFeePrice = driverFee?.Pris ?? 89m;
+        _driverFeePrice = driverFee?.Pris ?? 85m;
 
         LeftCatalogInputs.Clear();
         RightCatalogInputs.Clear();
@@ -458,8 +458,7 @@ public partial class OrderViewModel : ObservableObject
 
     private static bool TryParseSplit(string raw, out int p1, out int p2)
     {
-        p1 = 0;
-        p2 = 0;
+        p1 = 0; p2 = 0;
         if (!raw.StartsWith("D")) return false;
         var s = raw.Substring(1);
         var parts = s.Split('/');
@@ -496,10 +495,8 @@ public partial class OrderViewModel : ObservableObject
         ActivePizzaTitle = $"DELT {p1}/{p2}";
         SplitTitle = $"1: {_splitPizza1.Nummer} {_splitPizza1.Navn}   |   2: {_splitPizza2.Nummer} {_splitPizza2.Navn}";
 
-        Half1Adds.Clear();
-        Half1Removes.Clear();
-        Half2Adds.Clear();
-        Half2Removes.Clear();
+        Half1Adds.Clear(); Half1Removes.Clear();
+        Half2Adds.Clear(); Half2Removes.Clear();
 
         UpdateDisplayIngredientsForActiveHalf();
         UpdateActiveHalfLabel();
@@ -517,14 +514,20 @@ public partial class OrderViewModel : ObservableObject
             return;
         }
 
-        var s = (SizeText ?? "M").Trim().ToUpperInvariant();
+        var s = (SizeText ?? "").Trim().ToUpperInvariant();
+
+        if (string.IsNullOrWhiteSpace(s))
+        {
+            ActivePizzaPrice = 0;
+            return;
+        }
 
         decimal PriceFor(Pizza p) => s switch
         {
             "L" => p.PrisLarge,
             "G" => p.PrisGlutenfri,
             "M" => p.PrisMedium,
-            _ => p.PrisMedium
+            _ => 0
         };
 
         ActivePizzaPrice = Math.Max(PriceFor(_splitPizza1), PriceFor(_splitPizza2));
@@ -547,13 +550,20 @@ public partial class OrderViewModel : ObservableObject
             return;
         }
 
-        var s = (SizeText ?? "M").Trim().ToUpperInvariant();
+        var s = (SizeText ?? "").Trim().ToUpperInvariant();
+
+        if (string.IsNullOrWhiteSpace(s))
+        {
+            ActivePizzaPrice = 0;
+            return;
+        }
+
         ActivePizzaPrice = s switch
         {
             "L" => ActivePizza.PrisLarge,
             "G" => ActivePizza.PrisGlutenfri,
             "M" => ActivePizza.PrisMedium,
-            _ => ActivePizza.PrisMedium
+            _ => 0
         };
     }
 
@@ -617,10 +627,8 @@ public partial class OrderViewModel : ObservableObject
         _splitPizza2 = null;
         SplitTitle = "";
         ActiveHalfLabel = "";
-        Half1Adds.Clear();
-        Half1Removes.Clear();
-        Half2Adds.Clear();
-        Half2Removes.Clear();
+        Half1Adds.Clear(); Half1Removes.Clear();
+        Half2Adds.Clear(); Half2Removes.Clear();
         _activeHalf = 1;
     }
 
@@ -643,8 +651,11 @@ public partial class OrderViewModel : ObservableObject
 
         RefreshActivePizzaPrice();
 
-        var s = (SizeText ?? "M").Trim().ToUpperInvariant();
-        var sizeLabel = s is "M" or "L" or "G" ? s : "M";
+        var s = (SizeText ?? "").Trim().ToUpperInvariant();
+        var sizeLabel = s is "M" or "L" or "G" ? s : "";
+
+        if (string.IsNullOrWhiteSpace(sizeLabel))
+            return;
 
         string? note;
         string itemName;
@@ -702,7 +713,7 @@ public partial class OrderViewModel : ObservableObject
         PizzaNrText = "";
         _suppressPizzaLoad = false;
 
-        SizeText = "M";
+        SizeText = "";
         ActivePizzaQuantity = 1;
 
         ClearSplitDraft();
@@ -804,7 +815,7 @@ public partial class OrderViewModel : ObservableObject
         PizzaNrText = "";
         _suppressPizzaLoad = false;
 
-        SizeText = "M";
+        SizeText = "";
         ActivePizzaQuantity = 1;
 
         ClearSplitDraft();
@@ -965,7 +976,7 @@ public partial class OrderViewModel : ObservableObject
         PizzaNrText = "";
         _suppressPizzaLoad = false;
 
-        SizeText = "M";
+        SizeText = "";
         ActivePizzaQuantity = 1;
 
         ClearSplitDraft();
@@ -992,14 +1003,14 @@ public partial class OrderViewModel : ObservableObject
 
     private static string PizzaSizeFromItemName(string? itemName)
     {
-        if (string.IsNullOrWhiteSpace(itemName)) return "M";
+        if (string.IsNullOrWhiteSpace(itemName)) return "";
 
         var start = itemName.LastIndexOf('(');
         var end = itemName.LastIndexOf(')');
-        if (start < 0 || end < 0 || end <= start) return "M";
+        if (start < 0 || end < 0 || end <= start) return "";
 
         var s = itemName.Substring(start + 1, end - start - 1).Trim().ToUpperInvariant();
-        return s is "M" or "L" or "G" ? s : "M";
+        return s is "M" or "L" or "G" ? s : "";
     }
 
     private static void ParseNote(string? note, out string[] uten, out string[] ekstra)
