@@ -70,17 +70,28 @@ public class PrintService
         double pageWidth = MmToPx(210);
         double pageHeight = MmToPx(297);
 
-        double contentWidth = MmToPx(105);
-        double left = (pageWidth - contentWidth) / 2.0;
+        // Litt smalere bredde så det ikke stikker ut på sidene
+        double contentWidth = MmToPx(93);
 
-        double kitchenTop = 10;
-        double kitchenHeight = 180;
+        // Venstre / høyre
+        double kitchenLeft = (pageWidth - contentWidth) / 2.0;
+        double receiptLeft = (pageWidth - contentWidth) / 2.0;
+        double driverLeft = (pageWidth - contentWidth) / 2.0;
 
-        double receiptTop = 210;
-        double receiptHeight = 210;
+        // Opp / ned
+        // Kjøkkenlappen beholdes omtrent der den er
+        double kitchenTop = 18;
 
-        double driverTop = 450;
-        double driverHeight = 250;
+        // Midtdelen skal være mer midt på arket
+        double receiptTop = 250;
+
+        // Sjåførlappen skal være nederst
+        double driverTop = 520;
+
+        // Høyder
+        double kitchenHeight = 185;
+        double receiptHeight = 165;
+        double driverHeight = 170;
 
         var fixedDoc = new FixedDocument
         {
@@ -99,19 +110,19 @@ public class PrintService
         };
 
         var kitchen = WrapFixedRegion(BuildKitchenBlock(order), contentWidth, kitchenHeight);
-        FixedPage.SetLeft(kitchen, left);
+        FixedPage.SetLeft(kitchen, kitchenLeft);
         FixedPage.SetTop(kitchen, kitchenTop);
         fixedPage.Children.Add(kitchen);
 
         var receipt = WrapFixedRegion(BuildReceiptBlock(order), contentWidth, receiptHeight);
-        FixedPage.SetLeft(receipt, left);
+        FixedPage.SetLeft(receipt, receiptLeft);
         FixedPage.SetTop(receipt, receiptTop);
         fixedPage.Children.Add(receipt);
 
         if (order.DeliveryType == DeliveryType.Delivery)
         {
             var driver = WrapFixedRegion(BuildDriverBlock(order), contentWidth, driverHeight);
-            FixedPage.SetLeft(driver, left);
+            FixedPage.SetLeft(driver, driverLeft);
             FixedPage.SetTop(driver, driverTop);
             fixedPage.Children.Add(driver);
         }
@@ -188,10 +199,10 @@ public class PrintService
             Margin = new Thickness(0)
         };
 
-        root.Children.Add(Text("KJØKKENLAPP", true));
-        root.Children.Add(Text($"{customerName} / {phone}"));
-        root.Children.Add(Text($"{deliveryFlag}: {order.Id}, Lapp: 1, Inn: {createdLocal:dd.MM HH:mm}, Leveres: {(scheduled != null ? scheduled.Value.ToString("dd.MM HH:mm") : "-")}"));
-        root.Children.Add(Spacer(6));
+        root.Children.Add(Text("KJØKKENLAPP", true, 10));
+        root.Children.Add(Text($"{customerName} / {phone}", false, 9));
+        root.Children.Add(Text($"{deliveryFlag}: {order.Id}, Lapp: 1, Inn: {createdLocal:dd.MM HH:mm}, Leveres: {(scheduled != null ? scheduled.Value.ToString("dd.MM HH:mm") : "-")}", false, 9));
+        root.Children.Add(Spacer(5));
 
         var pizzaColumns = BuildKitchenPizzaColumns(order);
         if (pizzaColumns.Count > 0)
@@ -202,15 +213,15 @@ public class PrintService
             .ToList();
 
         if (nonPizzaLines.Count > 0 || order.Items.Any(x => string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase)))
-            root.Children.Add(Spacer(6));
+            root.Children.Add(Spacer(5));
 
         foreach (var it in nonPizzaLines)
-            root.Children.Add(Text($"{it.Quantity} {DisplayItemName(it.ItemName)}"));
+            root.Children.Add(Text($"{it.Quantity} {DisplayItemName(it.ItemName)}", false, 9));
 
         if (order.Items.Any(x => string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase)))
         {
             var fee = order.Items.First(x => string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase));
-            root.Children.Add(Text($"{fee.Quantity} Kjøretillegg"));
+            root.Children.Add(Text($"{fee.Quantity} Kjøretillegg", false, 9));
         }
 
         return root;
@@ -340,9 +351,9 @@ public class PrintService
             Margin = new Thickness(0)
         };
 
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(78) });
         foreach (var _ in pizzaColumns)
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
 
         int rowIndex = 0;
 
@@ -360,7 +371,7 @@ public class PrintService
                     {
                         Text = cells[i],
                         FontFamily = new FontFamily("Consolas"),
-                        FontSize = 11,
+                        FontSize = 9,
                         TextAlignment = TextAlignment.Center,
                         Padding = new Thickness(2, 1, 2, 1)
                     }
@@ -410,16 +421,17 @@ public class PrintService
         headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var leftInfo = new StackPanel();
-        leftInfo.Children.Add(Text("PizzaXpressen - Halden", true));
-        leftInfo.Children.Add(Text("Kongens brygge 2, 1767 Halden"));
-        leftInfo.Children.Add(Text("halden@pizzaxpressen.no"));
+        leftInfo.Children.Add(Text("PizzaXpressen - Halden", true, 9));
+        leftInfo.Children.Add(Text("Kongens brygge 2, 1767 Halden", false, 8));
+        leftInfo.Children.Add(Text("halden@pizzaxpressen.no", false, 8));
 
         var rightInfo = new StackPanel();
-        rightInfo.Children.Add(Text($"Kunde: {customerName} / {phone}", true));
-        rightInfo.Children.Add(Text(address));
-        rightInfo.Children.Add(Text(scheduled != null
-            ? $"Leveres: {scheduled:dd.MM.yyyy} kl. {scheduled:HH:mm}"
-            : "Leveres: -"));
+        rightInfo.Children.Add(Text($"Kunde: {customerName} / {phone}", true, 9));
+        rightInfo.Children.Add(Text(address, false, 8));
+        rightInfo.Children.Add(Text(
+            scheduled != null
+                ? $"Leveres: {scheduled:dd.MM.yyyy} kl. {scheduled:HH:mm}"
+                : "Leveres: -", false, 8));
 
         Grid.SetColumn(leftInfo, 0);
         Grid.SetColumn(rightInfo, 1);
@@ -427,14 +439,14 @@ public class PrintService
         headerGrid.Children.Add(rightInfo);
 
         root.Children.Add(headerGrid);
-        root.Children.Add(Spacer(6));
+        root.Children.Add(Spacer(5));
 
         var metaGrid = new Grid();
         metaGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         metaGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });
 
-        var best = Text($"Bestilling: {order.Id} - Lapp: 1", true);
-        var tot = Text($"Total: {total:0.00} kr", true);
+        var best = Text($"Bestilling: {order.Id} - Lapp: 1", true, 9);
+        var tot = Text($"Total: {total:0.00} kr", true, 9);
         tot.TextAlignment = TextAlignment.Right;
 
         Grid.SetColumn(best, 0);
@@ -443,26 +455,26 @@ public class PrintService
         metaGrid.Children.Add(tot);
 
         root.Children.Add(metaGrid);
-        root.Children.Add(Spacer(6));
+        root.Children.Add(Spacer(5));
 
         var contentGrid = new Grid();
-        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(205) });
-        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(155) });
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(185) });
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
 
         var pizzaTable = new Grid();
-        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(55) });
-        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(55) });
-        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(30) });
-        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(55) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(45) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(50) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(50) });
 
         int pRow = 0;
         void AddPizzaRow(string a, string b, string c, string d)
         {
             pizzaTable.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            AddGridCell(pizzaTable, pRow, 0, a);
-            AddGridCell(pizzaTable, pRow, 1, b);
-            AddGridCell(pizzaTable, pRow, 2, c);
-            AddGridCell(pizzaTable, pRow, 3, d, TextAlignment.Right);
+            AddGridCell(pizzaTable, pRow, 0, a, 8);
+            AddGridCell(pizzaTable, pRow, 1, b, 8);
+            AddGridCell(pizzaTable, pRow, 2, c, 8);
+            AddGridCell(pizzaTable, pRow, 3, d, 8, TextAlignment.Right);
             pRow++;
         }
 
@@ -482,23 +494,23 @@ public class PrintService
 
         if (!string.IsNullOrWhiteSpace(userNotes))
         {
-            rightSection.Children.Add(Text("Merknader:", true));
-            rightSection.Children.Add(Text(userNotes));
-            rightSection.Children.Add(Spacer(4));
+            rightSection.Children.Add(Text("Merknader:", true, 8));
+            rightSection.Children.Add(Text(userNotes, false, 8));
+            rightSection.Children.Add(Spacer(3));
         }
 
         var extrasTable = new Grid();
-        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(75) });
-        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(25) });
-        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(45) });
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(60) });
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
 
         int eRow = 0;
         void AddExtraRow(string a, string b, string c)
         {
             extrasTable.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            AddGridCell(extrasTable, eRow, 0, a);
-            AddGridCell(extrasTable, eRow, 1, b);
-            AddGridCell(extrasTable, eRow, 2, c, TextAlignment.Right);
+            AddGridCell(extrasTable, eRow, 0, a, 8);
+            AddGridCell(extrasTable, eRow, 1, b, 8);
+            AddGridCell(extrasTable, eRow, 2, c, 8, TextAlignment.Right);
             eRow++;
         }
 
@@ -540,34 +552,34 @@ public class PrintService
 
         var root = new StackPanel();
 
-        root.Children.Add(Text($"Faktura: {order.Id} - Lapp: 1", true, 15));
-        root.Children.Add(Text($"Kunde: {customer}"));
-        root.Children.Add(Text($"Tlf: {phone}"));
-        root.Children.Add(Text("Adresse:"));
-        root.Children.Add(Text(address));
-        root.Children.Add(Spacer(6));
+        root.Children.Add(Text($"Faktura: {order.Id} - Lapp: 1", true, 11));
+        root.Children.Add(Text($"Kunde: {customer}", false, 8));
+        root.Children.Add(Text($"Tlf: {phone}", false, 8));
+        root.Children.Add(Text("Adresse:", false, 8));
+        root.Children.Add(Text(address, false, 8));
+        root.Children.Add(Spacer(5));
 
-        root.Children.Add(Text($"## {pizzaCount} Pizza{(pizzaCount == 1 ? "" : "er")} skal bringes", true, 18));
-        root.Children.Add(Spacer(8));
+        root.Children.Add(Text($"## {pizzaCount} Pizza{(pizzaCount == 1 ? "" : "er")} skal bringes", true, 14));
+        root.Children.Add(Spacer(6));
 
         foreach (var item in order.Items.Where(x =>
                      !IsPizzaItem(x) &&
                      !string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase)))
         {
-            root.Children.Add(Text($"{item.Quantity}x {DisplayItemName(item.ItemName)}", false, 13));
+            root.Children.Add(Text($"{item.Quantity}x {DisplayItemName(item.ItemName)}", false, 9));
         }
 
-        root.Children.Add(Spacer(10));
+        root.Children.Add(Spacer(8));
 
         var footer = new Grid();
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });
 
         var leftFooter = new StackPanel();
-        leftFooter.Children.Add(Text($"Dato/tid: {createdLocal:dd.MM.yyyy} kl. {createdLocal:HH:mm}"));
-        leftFooter.Children.Add(Text(scheduled != null ? $"Levering: {scheduled:HH:mm}" : "Levering: -"));
+        leftFooter.Children.Add(Text($"Dato/tid: {createdLocal:dd.MM.yyyy} kl. {createdLocal:HH:mm}", false, 8));
+        leftFooter.Children.Add(Text(scheduled != null ? $"Levering: {scheduled:HH:mm}" : "Levering: -", false, 8));
 
-        var rightFooter = Text($"Total: {total:0.00} kr", true, 15);
+        var rightFooter = Text($"Total: {total:0.00} kr", true, 12);
         rightFooter.TextAlignment = TextAlignment.Right;
 
         Grid.SetColumn(leftFooter, 0);
@@ -580,23 +592,24 @@ public class PrintService
         var qr = BuildQrImage(address);
         if (qr != null)
         {
-            root.Children.Add(Spacer(8));
-            root.Children.Add(Text("Skann for kart", false, 10));
+            root.Children.Add(Spacer(6));
+            root.Children.Add(Text("Skann for kart", false, 8));
             root.Children.Add(qr);
         }
 
         return root;
     }
 
-    private static void AddGridCell(Grid grid, int row, int col, string text, TextAlignment align = TextAlignment.Left)
+    private static void AddGridCell(Grid grid, int row, int col, string text, double fontSize = 9, TextAlignment align = TextAlignment.Left)
     {
         var tb = new TextBlock
         {
             Text = text,
             FontFamily = new FontFamily("Consolas"),
-            FontSize = 11,
+            FontSize = fontSize,
             TextAlignment = align,
-            Margin = new Thickness(0)
+            Margin = new Thickness(0),
+            TextWrapping = TextWrapping.Wrap
         };
 
         Grid.SetRow(tb, row);
@@ -604,7 +617,7 @@ public class PrintService
         grid.Children.Add(tb);
     }
 
-    private static TextBlock Text(string text, bool bold = false, double size = 11)
+    private static TextBlock Text(string text, bool bold = false, double size = 9)
     {
         return new TextBlock
         {
@@ -629,10 +642,10 @@ public class PrintService
             return new Image
             {
                 Source = new BitmapImage(new Uri("pack://application:,,,/Assets/logo.png")),
-                Width = 240,
+                Width = 210,
                 Stretch = Stretch.Uniform,
                 HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(0, 4, 0, 2)
+                Margin = new Thickness(0, 2, 0, 2)
             };
         }
         catch
@@ -664,7 +677,7 @@ public class PrintService
         return new Image
         {
             Source = img,
-            Width = 90,
+            Width = 72,
             Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Left
         };
