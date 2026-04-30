@@ -442,14 +442,14 @@ public class PrintService
         root.Children.Add(Spacer(6));
 
         var contentGrid = new Grid();
-        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(190) });
-        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
 
         var pizzaTable = new Grid();
-        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(45) });
-        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(55) });
-        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(25) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) });
         pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(42) });
 
         int pRow = 0;
         void AddPizzaRow(string a, string b, string c, string d)
@@ -477,21 +477,21 @@ public class PrintService
         var rightSection = new StackPanel();
 
         var extrasTable = new Grid();
-        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62) });
-        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(20) });
-        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) });
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) });
 
         int eRow = 0;
         void AddExtraRow(string a, string b, string c)
         {
             extrasTable.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            AddGridCell(extrasTable, eRow, 0, a, 10);
-            AddGridCell(extrasTable, eRow, 1, b, 10);
-            AddGridCell(extrasTable, eRow, 2, c, 10, TextAlignment.Right);
+            AddGridCell(extrasTable, eRow, 0, a, 9);
+            AddGridCell(extrasTable, eRow, 1, b, 9);
+            AddGridCell(extrasTable, eRow, 2, c, 9, TextAlignment.Right);
             eRow++;
         }
 
-        AddExtraRow("Tilbehør/\nDrikke", "Ant", "Pris");
+        AddExtraRow("Tilbehør", "Ant", "Pris");
 
         foreach (var item in order.Items.Where(x => !IsPizzaItem(x)))
         {
