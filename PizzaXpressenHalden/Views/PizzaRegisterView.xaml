@@ -64,7 +64,7 @@
                                          Background="White">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="4,2">
+                                            <TextBlock Margin="4,2" Foreground="Black">
                                                 <Run Text="{Binding Nummer}"/>
                                                 <Run Text=" - "/>
                                                 <Run Text="{Binding Navn}"/>
@@ -212,7 +212,12 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" BorderBrush="#2b7a2b" BorderThickness="1" CornerRadius="6" Padding="10" Background="White">
+                        <Border Grid.Column="0"
+                                BorderBrush="#2b7a2b"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10"
+                                Background="White">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -220,24 +225,59 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="VARER OG PRISER" FontSize="22" FontWeight="Bold" Foreground="#2b7a2b" Margin="0,0,0,12"/>
+                                <TextBlock Grid.Row="0"
+                                           Text="VARER OG PRISER"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           Foreground="#2b7a2b"
+                                           Margin="0,0,0,12"/>
 
-                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                                    <Button Content="Oppdater" Command="{Binding RefreshCatalogCommand}" Width="110" Height="32" Margin="0,0,10,0" FontWeight="SemiBold"/>
-                                    <Button Content="Ny vare" Command="{Binding NewCatalogCommand}" Width="110" Height="32" FontWeight="SemiBold"/>
+                                <StackPanel Grid.Row="1"
+                                            Orientation="Horizontal"
+                                            Margin="0,0,0,10">
+                                    <Button Content="Oppdater"
+                                            Command="{Binding RefreshCatalogCommand}"
+                                            Width="110"
+                                            Height="32"
+                                            Margin="0,0,10,0"
+                                            FontWeight="SemiBold"/>
+
+                                    <Button Content="Ny vare"
+                                            Command="{Binding NewCatalogCommand}"
+                                            Width="110"
+                                            Height="32"
+                                            FontWeight="SemiBold"/>
                                 </StackPanel>
 
-                                <ListBox Grid.Row="2" ItemsSource="{Binding CatalogItems}" SelectedItem="{Binding SelectedCatalogItem}" FontSize="14" BorderBrush="#d9d9d9" BorderThickness="1" Background="White">
+                                <ListBox Grid.Row="2"
+                                         ItemsSource="{Binding CatalogItems}"
+                                         SelectedItem="{Binding SelectedCatalogItem}"
+                                         FontSize="14"
+                                         BorderBrush="#d9d9d9"
+                                         BorderThickness="1"
+                                         Background="White">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="4,2" Text="{Binding DisplayText}"/>
+                                            <TextBlock Margin="4,2" Foreground="Black">
+                                                <Run Text="{Binding Category}"/>
+                                                <Run Text=" - "/>
+                                                <Run Text="{Binding Navn}"/>
+                                                <Run Text=" ("/>
+                                                <Run Text="{Binding Pris}"/>
+                                                <Run Text=" kr)"/>
+                                            </TextBlock>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
                             </Grid>
                         </Border>
 
-                        <Border Grid.Column="2" BorderBrush="#2b7a2b" BorderThickness="1" CornerRadius="6" Padding="10" Background="White">
+                        <Border Grid.Column="2"
+                                BorderBrush="#2b7a2b"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10"
+                                Background="White">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -246,7 +286,12 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="REDIGER VARE / PRIS" FontSize="22" FontWeight="Bold" Foreground="#2b7a2b" Margin="0,0,0,12"/>
+                                <TextBlock Grid.Row="0"
+                                           Text="REDIGER VARE / PRIS"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           Foreground="#2b7a2b"
+                                           Margin="0,0,0,12"/>
 
                                 <Grid Grid.Row="1" Margin="0,0,0,12">
                                     <Grid.ColumnDefinitions>
@@ -269,11 +314,26 @@
                                     <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SelectedCatalogItem.Pris, UpdateSourceTrigger=PropertyChanged}" FontSize="14"/>
                                 </Grid>
 
-                                <CheckBox Grid.Row="2" Content="Aktiv" IsChecked="{Binding SelectedCatalogItem.IsActive}" FontSize="13" Foreground="#2b7a2b" Margin="0,0,0,14"/>
+                                <CheckBox Grid.Row="2"
+                                          Content="Aktiv"
+                                          IsChecked="{Binding SelectedCatalogItem.IsActive}"
+                                          FontSize="13"
+                                          Foreground="#2b7a2b"
+                                          Margin="0,0,0,14"/>
 
                                 <StackPanel Grid.Row="3" Orientation="Horizontal">
-                                    <Button Content="Lagre" Command="{Binding SaveCatalogCommand}" Width="140" Height="34" Margin="0,0,10,0" FontWeight="SemiBold"/>
-                                    <Button Content="Slett" Command="{Binding DeleteCatalogCommand}" Width="140" Height="34" FontWeight="SemiBold"/>
+                                    <Button Content="Lagre"
+                                            Command="{Binding SaveCatalogCommand}"
+                                            Width="140"
+                                            Height="34"
+                                            Margin="0,0,10,0"
+                                            FontWeight="SemiBold"/>
+
+                                    <Button Content="Slett"
+                                            Command="{Binding DeleteCatalogCommand}"
+                                            Width="140"
+                                            Height="34"
+                                            FontWeight="SemiBold"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -288,7 +348,12 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" BorderBrush="#2b7a2b" BorderThickness="1" CornerRadius="6" Padding="10" Background="White">
+                        <Border Grid.Column="0"
+                                BorderBrush="#2b7a2b"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10"
+                                Background="White">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -296,24 +361,52 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="TOPPINGS" FontSize="22" FontWeight="Bold" Foreground="#2b7a2b" Margin="0,0,0,12"/>
+                                <TextBlock Grid.Row="0"
+                                           Text="TOPPINGS"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           Foreground="#2b7a2b"
+                                           Margin="0,0,0,12"/>
 
-                                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                                    <Button Content="Oppdater" Command="{Binding RefreshToppingsCommand}" Width="110" Height="32" Margin="0,0,10,0" FontWeight="SemiBold"/>
-                                    <Button Content="Ny topping" Command="{Binding NewToppingCommand}" Width="110" Height="32" FontWeight="SemiBold"/>
+                                <StackPanel Grid.Row="1"
+                                            Orientation="Horizontal"
+                                            Margin="0,0,0,10">
+                                    <Button Content="Oppdater"
+                                            Command="{Binding RefreshToppingsCommand}"
+                                            Width="110"
+                                            Height="32"
+                                            Margin="0,0,10,0"
+                                            FontWeight="SemiBold"/>
+
+                                    <Button Content="Ny topping"
+                                            Command="{Binding NewToppingCommand}"
+                                            Width="110"
+                                            Height="32"
+                                            FontWeight="SemiBold"/>
                                 </StackPanel>
 
-                                <ListBox Grid.Row="2" ItemsSource="{Binding Toppings}" SelectedItem="{Binding SelectedTopping}" FontSize="14" BorderBrush="#d9d9d9" BorderThickness="1" Background="White">
+                                <ListBox Grid.Row="2"
+                                         ItemsSource="{Binding Toppings}"
+                                         SelectedItem="{Binding SelectedTopping}"
+                                         FontSize="14"
+                                         BorderBrush="#d9d9d9"
+                                         BorderThickness="1"
+                                         Background="White">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="4,2" Text="{Binding Navn}"/>
+                                            <TextBlock Margin="4,2" Text="{Binding Navn}" Foreground="Black"/>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
                             </Grid>
                         </Border>
 
-                        <Border Grid.Column="2" BorderBrush="#2b7a2b" BorderThickness="1" CornerRadius="6" Padding="10" Background="White">
+                        <Border Grid.Column="2"
+                                BorderBrush="#2b7a2b"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10"
+                                Background="White">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
@@ -321,7 +414,12 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="REDIGER TOPPING" FontSize="22" FontWeight="Bold" Foreground="#2b7a2b" Margin="0,0,0,12"/>
+                                <TextBlock Grid.Row="0"
+                                           Text="REDIGER TOPPING"
+                                           FontSize="22"
+                                           FontWeight="Bold"
+                                           Foreground="#2b7a2b"
+                                           Margin="0,0,0,12"/>
 
                                 <Grid Grid.Row="1" Margin="0,0,0,12">
                                     <Grid.ColumnDefinitions>
