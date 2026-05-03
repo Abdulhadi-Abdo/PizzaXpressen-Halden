@@ -17,6 +17,7 @@ public partial class OrderView : UserControl
         InitializeComponent();
 
         Loaded += OrderView_Loaded;
+        PreviewKeyDown += OrderView_PreviewKeyDown;
 
         AddressSuggestionList.PreviewMouseLeftButtonUp += AddressSuggestionList_PreviewMouseLeftButtonUp;
         AddressSuggestionList.PreviewKeyDown += AddressSuggestionList_PreviewKeyDown;
@@ -215,6 +216,15 @@ public partial class OrderView : UserControl
         {
             e.Handled = true;
             PrintButton.Focus();
+        }
+
+        if (e.Key == Key.F12)
+        {
+            if (DataContext is OrderViewModel vm && vm.SaveAndPrintCommand.CanExecute(null))
+                vm.SaveAndPrintCommand.Execute(null);
+
+            e.Handled = true;
+            return;
         }
     }
 
