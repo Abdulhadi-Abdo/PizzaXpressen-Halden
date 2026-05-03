@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.Input;
 using PizzaXpressenHalden.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -12,17 +13,19 @@ namespace PizzaXpressenHalden.Views;
 
 public partial class OrderView : UserControl
 {
+    private Window? _hostWindow;
+
     public OrderView()
     {
         InitializeComponent();
 
         Loaded += OrderView_Loaded;
+        Unloaded += OrderView_Unloaded;
+
         PreviewKeyDown += OrderView_PreviewKeyDown;
 
         AddressSuggestionList.PreviewMouseLeftButtonUp += AddressSuggestionList_PreviewMouseLeftButtonUp;
         AddressSuggestionList.PreviewKeyDown += AddressSuggestionList_PreviewKeyDown;
-
-        PreviewKeyDown += OrderView_PreviewKeyDown;
 
         if (PrintButton != null)
             PrintButton.Click += PrintButton_Click;
@@ -42,7 +45,54 @@ public partial class OrderView : UserControl
             tb.PreviewMouseLeftButtonDown += TextBox_PreviewMouseLeftButtonDown_SelectivelyIgnore;
         }
 
+        _hostWindow = Window.GetWindow(this);
+        if (_hostWindow != null)
+        {
+            _hostWindow.PreviewKeyDown -= HostWindow_PreviewKeyDown;
+            _hostWindow.PreviewKeyDown += HostWindow_PreviewKeyDown;
+        }
+
         FocusSizeBox();
+    }
+
+    private void OrderView_Unloaded(object sender, RoutedEventArgs e)
+    {
+        if (_hostWindow != null)
+            _hostWindow.PreviewKeyDown -= HostWindow_PreviewKeyDown;
+    }
+
+    private async void HostWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.F12)
+            return;
+
+        if (DataContext is not OrderViewModel vm)
+            return;
+
+        e.Handled = true;
+
+        try
+        {
+            if (vm.SaveAndPrintCommand is IAsyncRelayCommand asyncCmd)
+            {
+                if (asyncCmd.CanExecute(null))
+                    await asyncCmd.ExecuteAsync(null);
+            }
+            else
+            {
+                if (vm.SaveAndPrintCommand.CanExecute(null))
+                    vm.SaveAndPrintCommand.Execute(null);
+            }
+
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                FocusSizeBox();
+            }), DispatcherPriority.ApplicationIdle);
+        }
+        catch
+        {
+            // lar eventuelle feil håndteres av resten av appen
+        }
     }
 
     private void PrintButton_Click(object sender, RoutedEventArgs e)
@@ -216,15 +266,6 @@ public partial class OrderView : UserControl
         {
             e.Handled = true;
             PrintButton.Focus();
-        }
-
-        if (e.Key == Key.F12)
-        {
-            if (DataContext is OrderViewModel vm && vm.SaveAndPrintCommand.CanExecute(null))
-                vm.SaveAndPrintCommand.Execute(null);
-
-            e.Handled = true;
-            return;
         }
     }
 
