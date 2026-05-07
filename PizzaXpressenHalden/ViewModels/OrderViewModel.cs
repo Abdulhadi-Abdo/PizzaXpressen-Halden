@@ -35,6 +35,8 @@ public partial class OrderViewModel : ObservableObject
     private readonly Dictionary<string, string> _half1ToppingValues = new(StringComparer.CurrentCultureIgnoreCase);
     private readonly Dictionary<string, string> _half2ToppingValues = new(StringComparer.CurrentCultureIgnoreCase);
 
+    private readonly Dictionary<string, decimal> _pricedToppingUnitPrices = new(StringComparer.CurrentCultureIgnoreCase);
+
     private decimal _driverFeePrice = 85m;
 
     [ObservableProperty] private bool isSplitPizza;
@@ -218,6 +220,17 @@ public partial class OrderViewModel : ObservableObject
             ToppingInputs.Add(ti);
         }
 
+        _pricedToppingUnitPrices.Clear();
+
+        var toppingPriceCandidates = await _db.Extras
+            .AsNoTracking()
+            .Where(x => x.IsActive && (x.Navn == "X-Kjøtt" || x.Navn == "X-Ost"))
+            .Select(x => new { x.Navn, x.Pris })
+            .ToListAsync();
+
+        foreach (var x in toppingPriceCandidates)
+            _pricedToppingUnitPrices[x.Navn] = x.Pris;
+
         var til = await _db.Tilbehor
             .AsNoTracking()
             .Where(x => x.IsActive)
@@ -299,7 +312,7 @@ public partial class OrderViewModel : ObservableObject
         return _normalToppingValues;
     }
 
-    private static string BuildCustomToppingNote(Dictionary<string, string> values)
+    private static string BuildCustomToppingEncodedNote(Dictionary<string, string> values)
     {
         if (values.Count == 0)
             return "";
@@ -308,6 +321,17 @@ public partial class OrderViewModel : ObservableObject
             values
                 .OrderBy(x => x.Key, StringComparer.CurrentCultureIgnoreCase)
                 .Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value)}"));
+    }
+
+    private static string BuildCustomToppingDisplayNote(Dictionary<string, string> values)
+    {
+        if (values.Count == 0)
+            return "";
+
+        return string.Join(" | ",
+            values
+                .OrderBy(x => x.Key, StringComparer.CurrentCultureIgnoreCase)
+                .Select(x => $"{x.Key}={x.Value}"));
     }
 
     private static bool TryParseCustomToppingNote(string? note, out Dictionary<string, string> result)
@@ -342,6 +366,36 @@ public partial class OrderViewModel : ObservableObject
         return true;
     }
 
+    private static bool TryParseDisplayToppingNote(string? note, out Dictionary<string, string> result)
+    {
+        result = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(note))
+            return false;
+
+        var parts = note.Split('|', StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .ToList();
+
+        bool found = false;
+
+        foreach (var part in parts)
+        {
+            var idx = part.IndexOf('=');
+            if (idx <= 0) continue;
+
+            var key = part.Substring(0, idx).Trim();
+            var value = part.Substring(idx + 1).Trim();
+
+            if (key.Length == 0) continue;
+
+            result[key] = value;
+            found = true;
+        }
+
+        return found;
+    }
+
     private static void TryParseSplitCustomToppingNote(
         string? note,
         out Dictionary<string, string> half1,
@@ -361,11 +415,15 @@ public partial class OrderViewModel : ObservableObject
         {
             if (part.StartsWith("1:", StringComparison.OrdinalIgnoreCase))
             {
-                TryParseCustomToppingNote(part.Substring(2).Trim(), out half1);
+                var body = part.Substring(2).Trim();
+                if (!TryParseCustomToppingNote(body, out half1))
+                    TryParseDisplayToppingNote(body, out half1);
             }
             else if (part.StartsWith("2:", StringComparison.OrdinalIgnoreCase))
             {
-                TryParseCustomToppingNote(part.Substring(2).Trim(), out half2);
+                var body = part.Substring(2).Trim();
+                if (!TryParseCustomToppingNote(body, out half2))
+                    TryParseDisplayToppingNote(body, out half2);
             }
         }
     }
@@ -524,6 +582,36 @@ public partial class OrderViewModel : ObservableObject
         RefreshSplitPrice(p1, p2);
     }
 
+    private decimal CalculatePricedToppingExtra(Dictionary<string, string> toppingValues)
+    {
+        decimal total = 0m;
+
+        foreach (var kv in toppingValues)
+        {
+            if (!_pricedToppingUnitPrices.TryGetValue(kv.Key, out var unitPrice))
+                continue;
+
+            var raw = (kv.Value ?? "").Trim();
+            if (raw.Length == 0)
+                continue;
+
+            if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var qty) && qty > 0)
+            {
+                total += unitPrice * qty;
+                continue;
+            }
+
+            if (raw.Equals("+", StringComparison.OrdinalIgnoreCase) ||
+                raw.Equals("x", StringComparison.OrdinalIgnoreCase) ||
+                raw.Equals("xx", StringComparison.OrdinalIgnoreCase))
+            {
+                total += unitPrice;
+            }
+        }
+
+        return total;
+    }
+
     private void RefreshSplitPrice(int p1, int p2)
     {
         if (_splitPizza1 == null || _splitPizza2 == null)
@@ -533,6 +621,7 @@ public partial class OrderViewModel : ObservableObject
         }
 
         var s = (SizeText ?? "").Trim().ToUpperInvariant();
+
         if (string.IsNullOrWhiteSpace(s))
             s = "S";
 
@@ -544,7 +633,10 @@ public partial class OrderViewModel : ObservableObject
             _ => 0
         };
 
-        ActivePizzaPrice = Math.Max(PriceFor(_splitPizza1), PriceFor(_splitPizza2));
+        var basePrice = Math.Max(PriceFor(_splitPizza1), PriceFor(_splitPizza2));
+        var extra = CalculatePricedToppingExtra(_half1ToppingValues) + CalculatePricedToppingExtra(_half2ToppingValues);
+
+        ActivePizzaPrice = basePrice + extra;
     }
 
     private void RefreshActivePizzaPrice()
@@ -565,16 +657,19 @@ public partial class OrderViewModel : ObservableObject
         }
 
         var s = (SizeText ?? "").Trim().ToUpperInvariant();
+
         if (string.IsNullOrWhiteSpace(s))
             s = "S";
 
-        ActivePizzaPrice = s switch
+        var basePrice = s switch
         {
             "S" => ActivePizza.PrisLarge,
             "G" => ActivePizza.PrisGlutenfri,
             "M" => ActivePizza.PrisMedium,
             _ => 0
         };
+
+        ActivePizzaPrice = basePrice + CalculatePricedToppingExtra(_normalToppingValues);
     }
 
     private void SetActiveHalf(int half)
@@ -707,13 +802,13 @@ public partial class OrderViewModel : ObservableObject
         var s = (SizeText ?? "").Trim().ToUpperInvariant();
         var sizeLabel = s is "M" or "S" or "G" ? s : "S";
 
-        string? note;
+        string? displayNote;
         string itemName;
 
         if (IsSplitPizza && _splitPizza1 != null && _splitPizza2 != null)
         {
-            var n1 = BuildCustomToppingNote(_half1ToppingValues);
-            var n2 = BuildCustomToppingNote(_half2ToppingValues);
+            var n1 = BuildCustomToppingDisplayNote(_half1ToppingValues);
+            var n2 = BuildCustomToppingDisplayNote(_half2ToppingValues);
 
             var sb = new StringBuilder();
             if (!string.IsNullOrWhiteSpace(n1)) sb.Append("1: ").Append(n1);
@@ -723,13 +818,13 @@ public partial class OrderViewModel : ObservableObject
                 sb.Append("2: ").Append(n2);
             }
 
-            note = sb.Length == 0 ? null : sb.ToString();
+            displayNote = sb.Length == 0 ? null : sb.ToString();
             itemName = $"DELT {_splitPizza1.Nummer}/{_splitPizza2.Nummer} ({sizeLabel})";
         }
         else
         {
-            var n = BuildCustomToppingNote(_normalToppingValues);
-            note = string.IsNullOrWhiteSpace(n) ? null : n;
+            var n = BuildCustomToppingDisplayNote(_normalToppingValues);
+            displayNote = string.IsNullOrWhiteSpace(n) ? null : n;
             itemName = $"{ActivePizza.Nummer} {ActivePizza.Navn} ({sizeLabel})";
         }
 
@@ -739,7 +834,7 @@ public partial class OrderViewModel : ObservableObject
             ItemName = itemName,
             Quantity = Math.Max(1, ActivePizzaQuantity),
             UnitPrice = ActivePizzaPrice,
-            Note = note
+            Note = displayNote
         };
 
         var feeIndex = Items.ToList().FindIndex(i => i.ItemName == "Kj.tillegg");
@@ -821,6 +916,11 @@ public partial class OrderViewModel : ObservableObject
         if (TryParseCustomToppingNote(_editingOriginalLine.Note, out var customValues))
         {
             foreach (var kv in customValues)
+                _normalToppingValues[kv.Key] = kv.Value;
+        }
+        else if (TryParseDisplayToppingNote(_editingOriginalLine.Note, out var displayValues))
+        {
+            foreach (var kv in displayValues)
                 _normalToppingValues[kv.Key] = kv.Value;
         }
         else
@@ -979,7 +1079,7 @@ public partial class OrderViewModel : ObservableObject
                 ItemName = i.ItemName,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
-                Note = i.Note
+                Note = EncodeLineNoteForPrint(i)
             }).ToList()
         };
 
@@ -1029,6 +1129,49 @@ public partial class OrderViewModel : ObservableObject
         ClearActivePizzaDraft();
 
         RecalcTotal();
+    }
+
+    private string? EncodeLineNoteForPrint(OrderItem line)
+    {
+        if (line.PizzaId == null || string.IsNullOrWhiteSpace(line.Note))
+            return line.Note;
+
+        if ((line.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = (line.Note ?? "")
+                .Split(new[] { "||" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .ToList();
+
+            var sb = new StringBuilder();
+
+            foreach (var part in parts)
+            {
+                if (part.StartsWith("1:", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (TryParseDisplayToppingNote(part.Substring(2).Trim(), out var h1))
+                    {
+                        if (sb.Length > 0) sb.Append(" || ");
+                        sb.Append("1: ").Append(BuildCustomToppingEncodedNote(h1));
+                    }
+                }
+                else if (part.StartsWith("2:", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (TryParseDisplayToppingNote(part.Substring(2).Trim(), out var h2))
+                    {
+                        if (sb.Length > 0) sb.Append(" || ");
+                        sb.Append("2: ").Append(BuildCustomToppingEncodedNote(h2));
+                    }
+                }
+            }
+
+            return sb.Length == 0 ? line.Note : sb.ToString();
+        }
+
+        if (TryParseDisplayToppingNote(line.Note, out var values))
+            return BuildCustomToppingEncodedNote(values);
+
+        return line.Note;
     }
 
     private DateTime? TryParseTime(string? timeText)

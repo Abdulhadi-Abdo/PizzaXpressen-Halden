@@ -383,11 +383,15 @@
                                      TabIndex="24"/>
 
                             <TextBlock Text="Type (B/H)" Foreground="#2b7a2b" FontSize="13" Margin="0,8,0,0"/>
-                            <TextBox Text="{Binding DeliveryInputText, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox x:Name="DeliveryTypeBox"
+                                     Text="{Binding DeliveryInputText, UpdateSourceTrigger=PropertyChanged}"
                                      FontSize="16"
                                      Width="60"
                                      TabIndex="25"
-                                     CharacterCasing="Upper"/>
+                                     CharacterCasing="Upper"
+                                     MaxLength="1"
+                                     PreviewTextInput="DeliveryTypeBox_PreviewTextInput"
+                                     PreviewKeyDown="DeliveryTypeBox_PreviewKeyDown"/>
                         </StackPanel>
                     </Border>
 
@@ -416,10 +420,22 @@
                                       ColumnHeaderHeight="24"
                                       TabIndex="40">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Vare" Binding="{Binding ItemName}" Width="*"/>
-                                    <DataGridTextColumn Header="Ant" Binding="{Binding Quantity}" Width="45"/>
-                                    <DataGridTextColumn Header="Pris" Binding="{Binding UnitPrice}" Width="55"/>
-                                    <DataGridTextColumn Header="Notat" Binding="{Binding Note}" Width="130"/>
+                                    <DataGridTextColumn Header="Vare"
+                                                        Binding="{Binding ItemName}"
+                                                        Width="1.9*"
+                                                        MinWidth="170"/>
+                                    <DataGridTextColumn Header="Ant"
+                                                        Binding="{Binding Quantity}"
+                                                        Width="50"
+                                                        MinWidth="50"/>
+                                    <DataGridTextColumn Header="Pris"
+                                                        Binding="{Binding UnitPrice}"
+                                                        Width="65"
+                                                        MinWidth="65"/>
+                                    <DataGridTextColumn Header="Notat"
+                                                        Binding="{Binding Note}"
+                                                        Width="3.1*"
+                                                        MinWidth="240"/>
                                 </DataGrid.Columns>
                             </DataGrid>
 

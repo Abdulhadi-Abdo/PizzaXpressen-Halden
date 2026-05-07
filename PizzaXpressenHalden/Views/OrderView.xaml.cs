@@ -26,6 +26,9 @@ public partial class OrderView : UserControl
 
         if (PrintButton != null)
             PrintButton.Click += PrintButton_Click;
+
+        if (DeliveryTypeBox != null)
+            DataObject.AddPastingHandler(DeliveryTypeBox, DeliveryTypeBox_Pasting);
     }
 
     private void OrderView_Loaded(object sender, RoutedEventArgs e)
@@ -78,6 +81,48 @@ public partial class OrderView : UserControl
             e.Handled = true;
             tb.Focus();
         }
+    }
+
+    private static bool IsValidDeliveryChar(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        var c = char.ToUpperInvariant(text[0]);
+        return c == 'B' || c == 'H';
+    }
+
+    private void DeliveryTypeBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        e.Handled = !IsValidDeliveryChar(e.Text);
+    }
+
+    private void DeliveryTypeBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Space)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.V && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            e.Handled = true;
+        }
+    }
+
+    private void DeliveryTypeBox_Pasting(object sender, DataObjectPastingEventArgs e)
+    {
+        if (!e.DataObject.GetDataPresent(typeof(string)))
+        {
+            e.CancelCommand();
+            return;
+        }
+
+        var pastedText = (e.DataObject.GetData(typeof(string)) as string ?? "").Trim().ToUpperInvariant();
+
+        if (pastedText.Length != 1 || !IsValidDeliveryChar(pastedText))
+            e.CancelCommand();
     }
 
     private void OrderView_PreviewKeyDown(object sender, KeyEventArgs e)
