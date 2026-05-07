@@ -140,8 +140,7 @@ public class PrintService
 
         total += baseHeaderHeight;
         total += 4;
-        total += 20; // Nr
-        total += 20; // Ant
+        total += 20; // Nr x Ant
         total += 20; // Str
 
         foreach (var topping in toppings)
@@ -265,6 +264,16 @@ public class PrintService
             return "S";
 
         return s;
+    }
+
+    private static string FormatKitchenNrAndQuantity(string numberText, int quantity)
+    {
+        numberText = (numberText ?? "").Trim();
+
+        if (quantity <= 1)
+            return numberText;
+
+        return $"{numberText} x {quantity}";
     }
 
     private sealed class KitchenPizzaColumn
@@ -511,9 +520,17 @@ public class PrintService
             rowIndex++;
         }
 
-        AddRow(new[] { "Nr" }.Concat(pizzaColumns.Select(x => x.NumberText)).ToArray(), true);
-        AddRow(new[] { "Ant" }.Concat(pizzaColumns.Select(x => x.Quantity.ToString())).ToArray(), true);
-        AddRow(new[] { "Str" }.Concat(pizzaColumns.Select(x => NormalizeSize(x.SizeText))).ToArray(), true);
+        AddRow(
+            new[] { "Nr x Ant" }
+            .Concat(pizzaColumns.Select(x => FormatKitchenNrAndQuantity(x.NumberText, x.Quantity)))
+            .ToArray(),
+            true);
+
+        AddRow(
+            new[] { "Str" }
+            .Concat(pizzaColumns.Select(x => NormalizeSize(x.SizeText)))
+            .ToArray(),
+            true);
 
         foreach (var topping in allToppings)
         {
