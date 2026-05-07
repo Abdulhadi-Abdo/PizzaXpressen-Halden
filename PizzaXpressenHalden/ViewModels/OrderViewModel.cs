@@ -31,6 +31,10 @@ public partial class OrderViewModel : ObservableObject
     private OrderItem? _editingOriginalLine;
 
     private readonly HashSet<string> _currentBaseToppings = new(StringComparer.CurrentCultureIgnoreCase);
+    private readonly Dictionary<string, string> _normalToppingValues = new(StringComparer.CurrentCultureIgnoreCase);
+    private readonly Dictionary<string, string> _half1ToppingValues = new(StringComparer.CurrentCultureIgnoreCase);
+    private readonly Dictionary<string, string> _half2ToppingValues = new(StringComparer.CurrentCultureIgnoreCase);
+
     private decimal _driverFeePrice = 85m;
 
     [ObservableProperty] private bool isSplitPizza;
@@ -267,85 +271,103 @@ public partial class OrderViewModel : ObservableObject
         if (e.PropertyName != nameof(ToppingInput.Input)) return;
         if (sender is not ToppingInput ti) return;
 
-        var adds = IsSplitPizza ? (_activeHalf == 1 ? Half1Adds : Half2Adds) : ActiveAdds;
-        var removes = IsSplitPizza ? (_activeHalf == 1 ? Half1Removes : Half2Removes) : ActiveRemoves;
-
-        var raw = (ti.Input ?? "").Trim().ToLowerInvariant();
+        var store = GetCurrentToppingStore();
+        var raw = (ti.Input ?? "").Trim();
         var baseHas = _currentBaseToppings.Contains(ti.Navn);
 
-        if (raw.Length == 0)
+        if (baseHas)
         {
-            adds.Remove(ti.Navn);
-            removes.Remove(ti.Navn);
-            return;
-        }
-
-        if (raw.Any(ch => ch != 'x' && ch != '+' && ch != '-'))
-        {
-            _suppressToppingEvents = true;
-            ti.Input = baseHas ? "x" : "";
-            _suppressToppingEvents = false;
-            adds.Remove(ti.Navn);
-            removes.Remove(ti.Navn);
-            return;
-        }
-
-        if (raw.All(ch => ch == '-'))
-        {
-            if (!removes.Contains(ti.Navn)) removes.Add(ti.Navn);
-            adds.Remove(ti.Navn);
-            return;
-        }
-
-        if (raw.All(ch => ch == '+'))
-        {
-            if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
-            removes.Remove(ti.Navn);
-            return;
-        }
-
-        if (raw.All(ch => ch == 'x'))
-        {
-            if (baseHas)
-            {
-                if (raw.Length == 1)
-                {
-                    adds.Remove(ti.Navn);
-                    removes.Remove(ti.Navn);
-                }
-                else
-                {
-                    if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
-                    removes.Remove(ti.Navn);
-                }
-            }
+            if (string.IsNullOrWhiteSpace(raw) || raw.Equals("x", StringComparison.CurrentCultureIgnoreCase))
+                store.Remove(ti.Navn);
             else
+                store[ti.Navn] = raw;
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+                store.Remove(ti.Navn);
+            else
+                store[ti.Navn] = raw;
+        }
+    }
+
+    private Dictionary<string, string> GetCurrentToppingStore()
+    {
+        if (IsSplitPizza)
+            return _activeHalf == 1 ? _half1ToppingValues : _half2ToppingValues;
+
+        return _normalToppingValues;
+    }
+
+    private static string BuildCustomToppingNote(Dictionary<string, string> values)
+    {
+        if (values.Count == 0)
+            return "";
+
+        return "CUSTOM: " + string.Join(";",
+            values
+                .OrderBy(x => x.Key, StringComparer.CurrentCultureIgnoreCase)
+                .Select(x => $"{Uri.EscapeDataString(x.Key)}={Uri.EscapeDataString(x.Value)}"));
+    }
+
+    private static bool TryParseCustomToppingNote(string? note, out Dictionary<string, string> result)
+    {
+        result = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(note))
+            return false;
+
+        var trimmed = note.Trim();
+        if (!trimmed.StartsWith("CUSTOM:", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var body = trimmed.Substring(7).Trim();
+        if (body.Length == 0)
+            return true;
+
+        var pairs = body.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var pair in pairs)
+        {
+            var idx = pair.IndexOf('=');
+            if (idx <= 0) continue;
+
+            var key = Uri.UnescapeDataString(pair.Substring(0, idx).Trim());
+            var value = Uri.UnescapeDataString(pair.Substring(idx + 1).Trim());
+
+            if (key.Length == 0) continue;
+            result[key] = value;
+        }
+
+        return true;
+    }
+
+    private static void TryParseSplitCustomToppingNote(
+        string? note,
+        out Dictionary<string, string> half1,
+        out Dictionary<string, string> half2)
+    {
+        half1 = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+        half2 = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(note))
+            return;
+
+        var parts = note.Split(new[] { "||" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .ToList();
+
+        foreach (var part in parts)
+        {
+            if (part.StartsWith("1:", StringComparison.OrdinalIgnoreCase))
             {
-                if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
-                removes.Remove(ti.Navn);
+                TryParseCustomToppingNote(part.Substring(2).Trim(), out half1);
             }
-            return;
+            else if (part.StartsWith("2:", StringComparison.OrdinalIgnoreCase))
+            {
+                TryParseCustomToppingNote(part.Substring(2).Trim(), out half2);
+            }
         }
-
-        if (raw.All(ch => ch == 'x' || ch == '+'))
-        {
-            if (!adds.Contains(ti.Navn)) adds.Add(ti.Navn);
-            removes.Remove(ti.Navn);
-            return;
-        }
-
-        if (raw.All(ch => ch == 'x' || ch == '-'))
-        {
-            if (!removes.Contains(ti.Navn)) removes.Add(ti.Navn);
-            adds.Remove(ti.Navn);
-            return;
-        }
-
-        _suppressToppingEvents = true;
-        ti.Input = baseHas ? "x" : "";
-        _suppressToppingEvents = false;
-        adds.Remove(ti.Navn);
-        removes.Remove(ti.Navn);
     }
 
     private void CatalogInputChanged(object? sender, PropertyChangedEventArgs e)
@@ -448,11 +470,7 @@ public partial class OrderViewModel : ObservableObject
         foreach (var t in pizza.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
             DisplayIngredients.Add(t);
 
-        ActiveAdds.Clear();
-        ActiveRemoves.Clear();
-
         ApplyCurrentToppingStateToBoxes();
-
         RefreshActivePizzaPrice();
     }
 
@@ -495,8 +513,8 @@ public partial class OrderViewModel : ObservableObject
         ActivePizzaTitle = $"DELT {p1}/{p2}";
         SplitTitle = $"1: {_splitPizza1.Nummer} {_splitPizza1.Navn}   |   2: {_splitPizza2.Nummer} {_splitPizza2.Navn}";
 
-        Half1Adds.Clear(); Half1Removes.Clear();
-        Half2Adds.Clear(); Half2Removes.Clear();
+        _half1ToppingValues.Clear();
+        _half2ToppingValues.Clear();
 
         UpdateDisplayIngredientsForActiveHalf();
         UpdateActiveHalfLabel();
@@ -515,7 +533,6 @@ public partial class OrderViewModel : ObservableObject
         }
 
         var s = (SizeText ?? "").Trim().ToUpperInvariant();
-
         if (string.IsNullOrWhiteSpace(s))
             s = "S";
 
@@ -548,7 +565,6 @@ public partial class OrderViewModel : ObservableObject
         }
 
         var s = (SizeText ?? "").Trim().ToUpperInvariant();
-
         if (string.IsNullOrWhiteSpace(s))
             s = "S";
 
@@ -596,16 +612,13 @@ public partial class OrderViewModel : ObservableObject
 
     private void ApplyCurrentToppingStateToBoxes()
     {
-        var adds = IsSplitPizza ? (_activeHalf == 1 ? Half1Adds : Half2Adds) : ActiveAdds;
-        var removes = IsSplitPizza ? (_activeHalf == 1 ? Half1Removes : Half2Removes) : ActiveRemoves;
+        var store = GetCurrentToppingStore();
 
         _suppressToppingEvents = true;
         foreach (var ti in ToppingInputs)
         {
-            if (removes.Contains(ti.Navn))
-                ti.Input = "-";
-            else if (adds.Contains(ti.Navn))
-                ti.Input = "+";
+            if (store.TryGetValue(ti.Navn, out var customValue))
+                ti.Input = customValue;
             else if (_currentBaseToppings.Contains(ti.Navn))
                 ti.Input = "x";
             else
@@ -621,8 +634,8 @@ public partial class OrderViewModel : ObservableObject
         _splitPizza2 = null;
         SplitTitle = "";
         ActiveHalfLabel = "";
-        Half1Adds.Clear(); Half1Removes.Clear();
-        Half2Adds.Clear(); Half2Removes.Clear();
+        _half1ToppingValues.Clear();
+        _half2ToppingValues.Clear();
         _activeHalf = 1;
     }
 
@@ -633,10 +646,56 @@ public partial class OrderViewModel : ObservableObject
         ActivePizzaPrice = 0;
 
         DisplayIngredients.Clear();
-        ActiveAdds.Clear();
-        ActiveRemoves.Clear();
+        _normalToppingValues.Clear();
         _currentBaseToppings.Clear();
         ApplyCurrentToppingStateToBoxes();
+    }
+
+    public void ClearEntireOrder()
+    {
+        Items.Clear();
+        SelectedItem = null;
+
+        foreach (var ci in LeftCatalogInputs)
+            ci.QuantityText = "";
+
+        foreach (var ci in RightCatalogInputs)
+            ci.QuantityText = "";
+
+        _suppressToppingEvents = true;
+        foreach (var ti in ToppingInputs)
+            ti.Input = "";
+        _suppressToppingEvents = false;
+
+        _normalToppingValues.Clear();
+        _half1ToppingValues.Clear();
+        _half2ToppingValues.Clear();
+
+        Phone = "";
+        CustomerName = "";
+        AddressText = "";
+        OrderNotesText = "";
+        IsInfoPopupOpen = false;
+
+        TimeText = DateTime.Now.AddMinutes(30).ToString("HH:mm");
+
+        _suppressPizzaLoad = true;
+        PizzaNrText = "";
+        _suppressPizzaLoad = false;
+
+        SizeText = "";
+        ActivePizzaQuantity = 1;
+
+        ClearSplitDraft();
+        ClearActivePizzaDraft();
+
+        AddressSuggestions.Clear();
+
+        DeliveryType = DeliveryType.Delivery;
+        DeliveryInputText = "B";
+        SyncDriverFee();
+
+        RecalcTotal();
     }
 
     private void AddOrUpdatePizza()
@@ -653,8 +712,8 @@ public partial class OrderViewModel : ObservableObject
 
         if (IsSplitPizza && _splitPizza1 != null && _splitPizza2 != null)
         {
-            var n1 = BuildToppingNote(Half1Adds, Half1Removes);
-            var n2 = BuildToppingNote(Half2Adds, Half2Removes);
+            var n1 = BuildCustomToppingNote(_half1ToppingValues);
+            var n2 = BuildCustomToppingNote(_half2ToppingValues);
 
             var sb = new StringBuilder();
             if (!string.IsNullOrWhiteSpace(n1)) sb.Append("1: ").Append(n1);
@@ -669,7 +728,7 @@ public partial class OrderViewModel : ObservableObject
         }
         else
         {
-            var n = BuildToppingNote(ActiveAdds, ActiveRemoves);
+            var n = BuildCustomToppingNote(_normalToppingValues);
             note = string.IsNullOrWhiteSpace(n) ? null : n;
             itemName = $"{ActivePizza.Nummer} {ActivePizza.Navn} ({sizeLabel})";
         }
@@ -710,25 +769,6 @@ public partial class OrderViewModel : ObservableObject
         ClearSplitDraft();
         ClearActivePizzaDraft();
         RecalcTotal();
-    }
-
-    private static string BuildToppingNote(ObservableCollection<string> adds, ObservableCollection<string> removes)
-    {
-        if (adds.Count == 0 && removes.Count == 0) return "";
-
-        var sb = new StringBuilder();
-        if (removes.Count > 0)
-        {
-            sb.Append("Uten: ");
-            sb.Append(string.Join(", ", removes));
-        }
-        if (adds.Count > 0)
-        {
-            if (sb.Length > 0) sb.Append(" | ");
-            sb.Append("Ekstra: ");
-            sb.Append(string.Join(", ", adds));
-        }
-        return sb.ToString();
     }
 
     private async Task EditSelectedPizzaAsync()
@@ -776,12 +816,23 @@ public partial class OrderViewModel : ObservableObject
 
         UpdateBaseToppingsFromPizza(pizza);
 
-        ActiveAdds.Clear();
-        ActiveRemoves.Clear();
-        ParseNote(_editingOriginalLine.Note, out var uten, out var ekstra);
+        _normalToppingValues.Clear();
 
-        foreach (var u in uten) ActiveRemoves.Add(u);
-        foreach (var e in ekstra) ActiveAdds.Add(e);
+        if (TryParseCustomToppingNote(_editingOriginalLine.Note, out var customValues))
+        {
+            foreach (var kv in customValues)
+                _normalToppingValues[kv.Key] = kv.Value;
+        }
+        else
+        {
+            ParseNote(_editingOriginalLine.Note, out var uten, out var ekstra);
+
+            foreach (var u in uten)
+                _normalToppingValues[u] = "--";
+
+            foreach (var ex in ekstra)
+                _normalToppingValues[ex] = "XX";
+        }
 
         ApplyCurrentToppingStateToBoxes();
         RefreshActivePizzaPrice();
@@ -949,6 +1000,10 @@ public partial class OrderViewModel : ObservableObject
         foreach (var ti in ToppingInputs)
             ti.Input = "";
         _suppressToppingEvents = false;
+
+        _normalToppingValues.Clear();
+        _half1ToppingValues.Clear();
+        _half2ToppingValues.Clear();
 
         Total = 0;
         Phone = "";

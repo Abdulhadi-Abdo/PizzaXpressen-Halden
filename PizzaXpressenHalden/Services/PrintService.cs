@@ -136,16 +136,21 @@ public class PrintService
             .ToList();
 
         double baseHeaderHeight = 56;
-        double total = 0;
+        double tableHeight = 0;
 
-        total += baseHeaderHeight;
-        total += 4;
-        total += 20; // Nr x Ant
-        total += 20; // Str
+        tableHeight += 20;
+        tableHeight += 20;
 
         foreach (var topping in toppings)
-            total += EstimateKitchenLabelRowHeight(DisplayItemName(topping));
+            tableHeight += EstimateKitchenLabelRowHeight(DisplayItemName(topping));
 
+        int totalRows = toppings.Count + 2;
+        double scale = GetKitchenTableScale(totalRows);
+
+        double total = 0;
+        total += baseHeaderHeight;
+        total += 4;
+        total += tableHeight * scale;
         total += 6;
 
         return Math.Max(245, total);
@@ -210,6 +215,15 @@ public class PrintService
         }
 
         return Math.Max(1, total);
+    }
+
+    private static double GetKitchenTableScale(int totalRows)
+    {
+        if (totalRows <= 15)
+            return 1.0;
+
+        double scale = 15.0 / totalRows;
+        return Math.Max(0.72, scale);
     }
 
     private static Border WrapFixedRegionUnscaled(UIElement content, double width, double height)
@@ -389,10 +403,18 @@ public class PrintService
                 .ToList();
         }
 
-        ParseStandardNote(item.Note, out var removes, out var adds);
-
         foreach (var topping in baseToppings)
             result[topping] = "X";
+
+        if (TryParseCustomToppingNote(item.Note, out var customValues))
+        {
+            foreach (var kv in customValues)
+                result[kv.Key] = kv.Value;
+
+            return result;
+        }
+
+        ParseStandardNote(item.Note, out var removes, out var adds);
 
         foreach (var removed in removes)
             result[removed] = "--";
@@ -414,8 +436,6 @@ public class PrintService
         var nr1 = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
         var nr2 = int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
 
-        ParseSplitNote(item.Note, out var half1Removes, out var half1Adds, out var half2Removes, out var half2Adds);
-
         var pizza1 = _db.Pizzas
             .AsNoTracking()
             .Include(p => p.PizzaToppings).ThenInclude(pt => pt.Topping)
@@ -430,12 +450,6 @@ public class PrintService
         {
             foreach (var topping in pizza1.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
                 result[topping] = "X";
-
-            foreach (var topping in half1Removes)
-                result[topping] = "--";
-
-            foreach (var topping in half1Adds)
-                result[topping] = "XX";
         }
 
         if (pizza2 != null)
@@ -445,15 +459,94 @@ public class PrintService
                 if (!result.ContainsKey(topping))
                     result[topping] = "X";
             }
+        }
+
+        TryParseSplitCustomToppingNote(item.Note, out var half1, out var half2);
+
+        if (half1.Count == 0 && half2.Count == 0)
+        {
+            ParseSplitNote(item.Note, out var half1Removes, out var half1Adds, out var half2Removes, out var half2Adds);
+
+            foreach (var topping in half1Removes)
+                result[topping] = "--";
+            foreach (var topping in half1Adds)
+                result[topping] = "XX";
 
             foreach (var topping in half2Removes)
                 result[topping] = "--";
-
             foreach (var topping in half2Adds)
                 result[topping] = "XX";
+
+            return result;
         }
 
+        foreach (var kv in half1)
+            result[kv.Key] = kv.Value;
+
+        foreach (var kv in half2)
+            result[kv.Key] = kv.Value;
+
         return result;
+    }
+
+    private static bool TryParseCustomToppingNote(string? note, out Dictionary<string, string> result)
+    {
+        result = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(note))
+            return false;
+
+        var trimmed = note.Trim();
+        if (!trimmed.StartsWith("CUSTOM:", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var body = trimmed.Substring(7).Trim();
+        if (body.Length == 0)
+            return true;
+
+        var pairs = body.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var pair in pairs)
+        {
+            var idx = pair.IndexOf('=');
+            if (idx <= 0) continue;
+
+            var key = Uri.UnescapeDataString(pair.Substring(0, idx).Trim());
+            var value = Uri.UnescapeDataString(pair.Substring(idx + 1).Trim());
+
+            if (key.Length == 0) continue;
+            result[key] = value;
+        }
+
+        return true;
+    }
+
+    private static void TryParseSplitCustomToppingNote(
+        string? note,
+        out Dictionary<string, string> half1,
+        out Dictionary<string, string> half2)
+    {
+        half1 = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+        half2 = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(note))
+            return;
+
+        var parts = note.Split(new[] { "||" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(x => x.Trim())
+            .ToList();
+
+        foreach (var part in parts)
+        {
+            if (part.StartsWith("1:", StringComparison.OrdinalIgnoreCase))
+            {
+                TryParseCustomToppingNote(part.Substring(2).Trim(), out half1);
+            }
+            else if (part.StartsWith("2:", StringComparison.OrdinalIgnoreCase))
+            {
+                TryParseCustomToppingNote(part.Substring(2).Trim(), out half2);
+            }
+        }
     }
 
     private UIElement BuildKitchenCombinedTable(List<KitchenPizzaColumn> pizzaColumns)
@@ -551,6 +644,20 @@ public class PrintService
                 }))
                 .ToArray(),
                 false);
+        }
+
+        int totalRows = allToppings.Count + 2;
+        double scale = GetKitchenTableScale(totalRows);
+
+        if (scale < 1.0)
+        {
+            return new Border
+            {
+                HorizontalAlignment = HorizontalAlignment.Left,
+                LayoutTransform = new ScaleTransform(scale, scale),
+                RenderTransformOrigin = new Point(0, 0),
+                Child = grid
+            };
         }
 
         return grid;

@@ -100,6 +100,56 @@ public partial class OrderView : UserControl
             return;
         }
 
+        if (e.Key == Key.Escape)
+        {
+            if (DataContext is OrderViewModel vm)
+            {
+                var harInnhold =
+                    vm.Items.Any(i => i.ItemName != "Kj.tillegg") ||
+                    !string.IsNullOrWhiteSpace(vm.SizeText) ||
+                    !string.IsNullOrWhiteSpace(vm.PizzaNrText) ||
+                    vm.ActivePizzaQuantity != 1 ||
+                    !string.IsNullOrWhiteSpace(vm.CustomerName) ||
+                    !string.IsNullOrWhiteSpace(vm.Phone) ||
+                    !string.IsNullOrWhiteSpace(vm.AddressText) ||
+                    !string.IsNullOrWhiteSpace(vm.OrderNotesText) ||
+                    vm.ToppingInputs.Any(x => !string.IsNullOrWhiteSpace(x.Input)) ||
+                    vm.LeftCatalogInputs.Any(x => !string.IsNullOrWhiteSpace(x.QuantityText)) ||
+                    vm.RightCatalogInputs.Any(x => !string.IsNullOrWhiteSpace(x.QuantityText));
+
+                if (harInnhold)
+                {
+                    var result = MessageBox.Show(
+                        "Er du sikker på at du vil slette hele bestillingen og tømme handlekurven?",
+                        "Bekreft sletting",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        vm.ClearEntireOrder();
+
+                        Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            FocusPizzaNrBox();
+                        }), DispatcherPriority.ApplicationIdle);
+                    }
+                }
+                else
+                {
+                    vm.ClearEntireOrder();
+
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        FocusPizzaNrBox();
+                    }), DispatcherPriority.ApplicationIdle);
+                }
+            }
+
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.PageDown)
         {
             if (DataContext is OrderViewModel vm && vm.AddOrUpdatePizzaCommand.CanExecute(null))
