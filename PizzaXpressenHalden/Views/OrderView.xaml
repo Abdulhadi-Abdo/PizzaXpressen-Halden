@@ -63,27 +63,67 @@
                                            Foreground="#2b7a2b"
                                            Margin="0,0,0,8"/>
 
-                                <UniformGrid Columns="2" Margin="0,0,0,8">
-                                    <TextBlock Text="Størrelse (M/S/G)" Foreground="#2b7a2b" FontSize="13"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="10"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0"
+                                               Grid.Column="0"
+                                               Text="Størrelse (M/S/G)"
+                                               Foreground="#2b7a2b"
+                                               FontSize="13"
+                                               Margin="0,0,0,4"/>
+
+                                    <TextBlock Grid.Row="0"
+                                               Grid.Column="2"
+                                               Text="Pizza nr"
+                                               Foreground="#2b7a2b"
+                                               FontSize="13"
+                                               Margin="0,0,0,4"/>
+
                                     <TextBox x:Name="SizeBox"
+                                             Grid.Row="1"
+                                             Grid.Column="0"
                                              Text="{Binding SizeText, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="0"
                                              CharacterCasing="Upper"/>
 
-                                    <TextBlock Text="Pizza nr" Foreground="#2b7a2b" FontSize="13"/>
                                     <TextBox x:Name="PizzaNrBox"
+                                             Grid.Row="1"
+                                             Grid.Column="2"
                                              Text="{Binding PizzaNrText, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="1"
                                              CharacterCasing="Upper"/>
 
-                                    <TextBlock Text="Antall" Foreground="#2b7a2b" FontSize="13"/>
+                                    <TextBlock Grid.Row="3"
+                                               Grid.Column="0"
+                                               Grid.ColumnSpan="3"
+                                               Text="Antall"
+                                               Foreground="#2b7a2b"
+                                               FontSize="13"
+                                               Margin="0,0,0,4"/>
+
                                     <TextBox x:Name="AntallBox"
+                                             Grid.Row="4"
+                                             Grid.Column="0"
+                                             Grid.ColumnSpan="3"
                                              Text="{Binding ActivePizzaQuantity, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="2"/>
-                                </UniformGrid>
+                                </Grid>
 
                                 <TextBlock Text="{Binding ActivePizzaTitle}"
                                            FontSize="16"
