@@ -140,8 +140,9 @@ public class PrintService
 
         total += baseHeaderHeight;
         total += 4;
-        total += 20;
-        total += 20;
+        total += 20; // Nr
+        total += 20; // Ant
+        total += 20; // Str
 
         foreach (var topping in toppings)
             total += EstimateKitchenLabelRowHeight(DisplayItemName(topping));
@@ -253,10 +254,24 @@ public class PrintService
         return DisplayItemName(item.ItemName);
     }
 
+    private static string NormalizeSize(string? size)
+    {
+        var s = (size ?? "").Trim().ToUpperInvariant();
+
+        if (string.IsNullOrWhiteSpace(s))
+            return "S";
+
+        if (s == "L")
+            return "S";
+
+        return s;
+    }
+
     private sealed class KitchenPizzaColumn
     {
         public string NumberText { get; set; } = "";
         public string SizeText { get; set; } = "";
+        public int Quantity { get; set; } = 1;
         public HashSet<string> Toppings { get; set; } = new(StringComparer.CurrentCultureIgnoreCase);
     }
 
@@ -291,27 +306,53 @@ public class PrintService
 
     private List<KitchenPizzaColumn> BuildKitchenPizzaColumns(Order order)
     {
-        var result = new List<KitchenPizzaColumn>();
+        var raw = new List<KitchenPizzaColumn>();
 
         foreach (var item in order.Items.Where(IsPizzaItem))
         {
             ParsePizzaItemName(item.ItemName, out var pizzaNr, out var size, out _);
             var quantity = Math.Max(1, item.Quantity);
 
+            size = NormalizeSize(size);
+
             var toppingSet = BuildKitchenToppingSet(item);
 
             for (int i = 0; i < quantity; i++)
             {
-                result.Add(new KitchenPizzaColumn
+                raw.Add(new KitchenPizzaColumn
                 {
                     NumberText = string.IsNullOrWhiteSpace(pizzaNr) ? DisplayItemName(item.ItemName) : pizzaNr,
                     SizeText = size,
+                    Quantity = 1,
                     Toppings = new HashSet<string>(toppingSet, StringComparer.CurrentCultureIgnoreCase)
                 });
             }
         }
 
-        return result;
+        var grouped = raw
+            .GroupBy(x => new
+            {
+                x.NumberText,
+                x.SizeText,
+                ToppingsKey = string.Join("|", x.Toppings.OrderBy(t => t, StringComparer.CurrentCultureIgnoreCase))
+            })
+            .Select(g => new KitchenPizzaColumn
+            {
+                NumberText = g.Key.NumberText,
+                SizeText = g.Key.SizeText,
+                Quantity = g.Count(),
+                Toppings = new HashSet<string>(g.First().Toppings, StringComparer.CurrentCultureIgnoreCase)
+            })
+            .OrderBy(x =>
+            {
+                if (int.TryParse(x.NumberText, out var nr))
+                    return nr;
+                return int.MaxValue;
+            })
+            .ThenBy(x => x.SizeText)
+            .ToList();
+
+        return grouped;
     }
 
     private HashSet<string> BuildKitchenToppingSet(OrderItem item)
@@ -416,7 +457,6 @@ public class PrintService
 
         int pizzaCount = Math.Max(1, pizzaColumns.Count);
 
-        // Litt mindre enn før, men beholder samme plassering
         double totalTableWidth = 322;
         double firstColumnWidth = 104;
         double pizzaColumnWidth = (totalTableWidth - firstColumnWidth) / pizzaCount;
@@ -472,7 +512,8 @@ public class PrintService
         }
 
         AddRow(new[] { "Nr" }.Concat(pizzaColumns.Select(x => x.NumberText)).ToArray(), true);
-        AddRow(new[] { "Str" }.Concat(pizzaColumns.Select(x => x.SizeText)).ToArray(), true);
+        AddRow(new[] { "Ant" }.Concat(pizzaColumns.Select(x => x.Quantity.ToString())).ToArray(), true);
+        AddRow(new[] { "Str" }.Concat(pizzaColumns.Select(x => NormalizeSize(x.SizeText))).ToArray(), true);
 
         foreach (var topping in allToppings)
         {
@@ -586,7 +627,7 @@ public class PrintService
             ParsePizzaItemName(item.ItemName, out _, out var size, out _);
             AddPizzaRow(
                 GetReceiptPizzaLabel(item),
-                size,
+                NormalizeSize(size),
                 item.Quantity.ToString(),
                 (item.UnitPrice * item.Quantity).ToString("0.00", CultureInfo.InvariantCulture));
         }
@@ -808,10 +849,7 @@ public class PrintService
 
         var sizeMatch = Regex.Match(itemName, @"\(([^)]+)\)");
         if (sizeMatch.Success)
-            size = sizeMatch.Groups[1].Value.Trim().ToUpperInvariant();
-
-        if (string.IsNullOrWhiteSpace(size) || size == "L")
-            size = "S";
+            size = sizeMatch.Groups[1].Value.Trim();
 
         var noSize = Regex.Replace(itemName, @"\s*\([^)]+\)\s*$", "").Trim();
 
