@@ -130,7 +130,7 @@
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Pris M" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
                                     <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding SelectedPizza.PrisMedium, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Pris L" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Pris S" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
                                     <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding SelectedPizza.PrisLarge, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Margin="0,0,0,8"/>
 
                                     <TextBlock Grid.Row="5" Grid.Column="0" Text="Pris G" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>

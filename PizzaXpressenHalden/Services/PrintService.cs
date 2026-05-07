@@ -808,7 +808,10 @@ public class PrintService
 
         var sizeMatch = Regex.Match(itemName, @"\(([^)]+)\)");
         if (sizeMatch.Success)
-            size = sizeMatch.Groups[1].Value.Trim();
+            size = sizeMatch.Groups[1].Value.Trim().ToUpperInvariant();
+
+        if (string.IsNullOrWhiteSpace(size) || size == "L")
+            size = "S";
 
         var noSize = Regex.Replace(itemName, @"\s*\([^)]+\)\s*$", "").Trim();
 

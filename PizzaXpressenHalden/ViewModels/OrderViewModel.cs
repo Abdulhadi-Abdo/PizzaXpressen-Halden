@@ -517,14 +517,11 @@ public partial class OrderViewModel : ObservableObject
         var s = (SizeText ?? "").Trim().ToUpperInvariant();
 
         if (string.IsNullOrWhiteSpace(s))
-        {
-            ActivePizzaPrice = 0;
-            return;
-        }
+            s = "S";
 
         decimal PriceFor(Pizza p) => s switch
         {
-            "L" => p.PrisLarge,
+            "S" => p.PrisLarge,
             "G" => p.PrisGlutenfri,
             "M" => p.PrisMedium,
             _ => 0
@@ -553,14 +550,11 @@ public partial class OrderViewModel : ObservableObject
         var s = (SizeText ?? "").Trim().ToUpperInvariant();
 
         if (string.IsNullOrWhiteSpace(s))
-        {
-            ActivePizzaPrice = 0;
-            return;
-        }
+            s = "S";
 
         ActivePizzaPrice = s switch
         {
-            "L" => ActivePizza.PrisLarge,
+            "S" => ActivePizza.PrisLarge,
             "G" => ActivePizza.PrisGlutenfri,
             "M" => ActivePizza.PrisMedium,
             _ => 0
@@ -652,10 +646,7 @@ public partial class OrderViewModel : ObservableObject
         RefreshActivePizzaPrice();
 
         var s = (SizeText ?? "").Trim().ToUpperInvariant();
-        var sizeLabel = s is "M" or "L" or "G" ? s : "";
-
-        if (string.IsNullOrWhiteSpace(sizeLabel))
-            return;
+        var sizeLabel = s is "M" or "S" or "G" ? s : "S";
 
         string? note;
         string itemName;
@@ -1010,7 +1001,8 @@ public partial class OrderViewModel : ObservableObject
         if (start < 0 || end < 0 || end <= start) return "";
 
         var s = itemName.Substring(start + 1, end - start - 1).Trim().ToUpperInvariant();
-        return s is "M" or "L" or "G" ? s : "";
+        if (s == "L") return "S";
+        return s is "M" or "S" or "G" ? s : "S";
     }
 
     private static void ParseNote(string? note, out string[] uten, out string[] ekstra)

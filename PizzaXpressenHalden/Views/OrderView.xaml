@@ -64,7 +64,7 @@
                                            Margin="0,0,0,8"/>
 
                                 <UniformGrid Columns="2" Margin="0,0,0,8">
-                                    <TextBlock Text="Størrelse (M/L/G)" Foreground="#2b7a2b" FontSize="13"/>
+                                    <TextBlock Text="Størrelse (M/S/G)" Foreground="#2b7a2b" FontSize="13"/>
                                     <TextBox x:Name="SizeBox"
                                              Text="{Binding SizeText, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
