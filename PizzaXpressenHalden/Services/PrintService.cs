@@ -130,7 +130,7 @@ public class PrintService
         var pizzaColumns = BuildKitchenPizzaColumns(order);
 
         var toppings = pizzaColumns
-            .SelectMany(x => x.Toppings)
+            .SelectMany(x => x.ToppingStates.Keys)
             .Distinct(StringComparer.CurrentCultureIgnoreCase)
             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -281,7 +281,8 @@ public class PrintService
         public string NumberText { get; set; } = "";
         public string SizeText { get; set; } = "";
         public int Quantity { get; set; } = 1;
-        public HashSet<string> Toppings { get; set; } = new(StringComparer.CurrentCultureIgnoreCase);
+        public Dictionary<string, string> ToppingStates { get; set; } =
+            new(StringComparer.CurrentCultureIgnoreCase);
     }
 
     private UIElement BuildKitchenBlock(Order order)
@@ -324,7 +325,7 @@ public class PrintService
 
             size = NormalizeSize(size);
 
-            var toppingSet = BuildKitchenToppingSet(item);
+            var toppingStates = BuildKitchenToppingStates(item);
 
             for (int i = 0; i < quantity; i++)
             {
@@ -333,7 +334,7 @@ public class PrintService
                     NumberText = string.IsNullOrWhiteSpace(pizzaNr) ? DisplayItemName(item.ItemName) : pizzaNr,
                     SizeText = size,
                     Quantity = 1,
-                    Toppings = new HashSet<string>(toppingSet, StringComparer.CurrentCultureIgnoreCase)
+                    ToppingStates = new Dictionary<string, string>(toppingStates, StringComparer.CurrentCultureIgnoreCase)
                 });
             }
         }
@@ -343,14 +344,17 @@ public class PrintService
             {
                 x.NumberText,
                 x.SizeText,
-                ToppingsKey = string.Join("|", x.Toppings.OrderBy(t => t, StringComparer.CurrentCultureIgnoreCase))
+                ToppingsKey = string.Join("|",
+                    x.ToppingStates
+                        .OrderBy(k => k.Key, StringComparer.CurrentCultureIgnoreCase)
+                        .Select(k => $"{k.Key}:{k.Value}"))
             })
             .Select(g => new KitchenPizzaColumn
             {
                 NumberText = g.Key.NumberText,
                 SizeText = g.Key.SizeText,
                 Quantity = g.Count(),
-                Toppings = new HashSet<string>(g.First().Toppings, StringComparer.CurrentCultureIgnoreCase)
+                ToppingStates = new Dictionary<string, string>(g.First().ToppingStates, StringComparer.CurrentCultureIgnoreCase)
             })
             .OrderBy(x =>
             {
@@ -364,17 +368,12 @@ public class PrintService
         return grouped;
     }
 
-    private HashSet<string> BuildKitchenToppingSet(OrderItem item)
+    private Dictionary<string, string> BuildKitchenToppingStates(OrderItem item)
     {
-        var result = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+        var result = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
 
         if ((item.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
-        {
-            foreach (var t in BuildSplitPizzaKitchenToppingSet(item))
-                result.Add(t);
-
-            return result;
-        }
+            return BuildSplitPizzaKitchenToppingStates(item);
 
         var baseToppings = new List<string>();
         if (item.PizzaId.HasValue)
@@ -393,20 +392,20 @@ public class PrintService
         ParseStandardNote(item.Note, out var removes, out var adds);
 
         foreach (var topping in baseToppings)
-        {
-            if (!removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase))
-                result.Add(topping);
-        }
+            result[topping] = "X";
 
-        foreach (var topping in adds)
-            result.Add(topping);
+        foreach (var removed in removes)
+            result[removed] = "--";
+
+        foreach (var added in adds)
+            result[added] = "XX";
 
         return result;
     }
 
-    private HashSet<string> BuildSplitPizzaKitchenToppingSet(OrderItem item)
+    private Dictionary<string, string> BuildSplitPizzaKitchenToppingStates(OrderItem item)
     {
-        var result = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+        var result = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
 
         var name = item.ItemName ?? "";
         var m = Regex.Match(name, @"DELT\s+(\d+)\s*/\s*(\d+)", RegexOptions.IgnoreCase);
@@ -430,21 +429,28 @@ public class PrintService
         if (pizza1 != null)
         {
             foreach (var topping in pizza1.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
-                if (!half1Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase))
-                    result.Add(topping);
+                result[topping] = "X";
+
+            foreach (var topping in half1Removes)
+                result[topping] = "--";
 
             foreach (var topping in half1Adds)
-                result.Add(topping);
+                result[topping] = "XX";
         }
 
         if (pizza2 != null)
         {
             foreach (var topping in pizza2.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
-                if (!half2Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase))
-                    result.Add(topping);
+            {
+                if (!result.ContainsKey(topping))
+                    result[topping] = "X";
+            }
+
+            foreach (var topping in half2Removes)
+                result[topping] = "--";
 
             foreach (var topping in half2Adds)
-                result.Add(topping);
+                result[topping] = "XX";
         }
 
         return result;
@@ -453,7 +459,7 @@ public class PrintService
     private UIElement BuildKitchenCombinedTable(List<KitchenPizzaColumn> pizzaColumns)
     {
         var allToppings = pizzaColumns
-            .SelectMany(x => x.Toppings)
+            .SelectMany(x => x.ToppingStates.Keys)
             .Distinct(StringComparer.CurrentCultureIgnoreCase)
             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -536,7 +542,13 @@ public class PrintService
         {
             AddRow(
                 new[] { DisplayItemName(topping) }
-                .Concat(pizzaColumns.Select(x => x.Toppings.Contains(topping) ? "X" : ""))
+                .Concat(pizzaColumns.Select(x =>
+                {
+                    if (x.ToppingStates.TryGetValue(topping, out var state))
+                        return state;
+
+                    return "";
+                }))
                 .ToArray(),
                 false);
         }
