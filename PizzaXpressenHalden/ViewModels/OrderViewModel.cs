@@ -204,6 +204,51 @@ public partial class OrderViewModel : ObservableObject
 
     partial void OnSizeTextChanged(string value) => RefreshActivePizzaPrice();
 
+    private static string NormalizePricedToppingName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "";
+
+        var s = name.Trim().ToUpperInvariant();
+        s = s.Replace("Ø", "O");
+        s = s.Replace("Æ", "AE");
+        s = s.Replace("Å", "A");
+        s = s.Replace("-", "");
+        s = s.Replace("_", "");
+        s = s.Replace(" ", "");
+        return s;
+    }
+
+    private static bool IsPricedSpecialToppingName(string? name)
+    {
+        var normalized = NormalizePricedToppingName(name);
+        return normalized == "XOST" || normalized == "XKJOTT";
+    }
+
+    private bool TryGetPricedToppingUnitPrice(string? toppingName, out decimal unitPrice)
+    {
+        unitPrice = 0m;
+
+        if (string.IsNullOrWhiteSpace(toppingName))
+            return false;
+
+        if (_pricedToppingUnitPrices.TryGetValue(toppingName, out unitPrice))
+            return true;
+
+        var normalized = NormalizePricedToppingName(toppingName);
+
+        foreach (var kv in _pricedToppingUnitPrices)
+        {
+            if (NormalizePricedToppingName(kv.Key) == normalized)
+            {
+                unitPrice = kv.Value;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task LoadAsync()
     {
         var toppings = await _db.Toppings
@@ -219,17 +264,6 @@ public partial class OrderViewModel : ObservableObject
             ti.PropertyChanged += ToppingInputChanged;
             ToppingInputs.Add(ti);
         }
-
-        _pricedToppingUnitPrices.Clear();
-
-        var toppingPriceCandidates = await _db.Extras
-            .AsNoTracking()
-            .Where(x => x.IsActive && (x.Navn == "X-Kjøtt" || x.Navn == "X-Ost"))
-            .Select(x => new { x.Navn, x.Pris })
-            .ToListAsync();
-
-        foreach (var x in toppingPriceCandidates)
-            _pricedToppingUnitPrices[x.Navn] = x.Pris;
 
         var til = await _db.Tilbehor
             .AsNoTracking()
@@ -252,13 +286,22 @@ public partial class OrderViewModel : ObservableObject
             .Select(x => new { x.Navn, x.Pris })
             .ToListAsync();
 
+        _pricedToppingUnitPrices.Clear();
+        foreach (var x in ex)
+        {
+            if (IsPricedSpecialToppingName(x.Navn))
+                _pricedToppingUnitPrices[x.Navn] = x.Pris;
+        }
+
         var driverFee = ex.FirstOrDefault(x => x.Navn == "Kj.tillegg");
         _driverFeePrice = driverFee?.Pris ?? 85m;
 
         LeftCatalogInputs.Clear();
         RightCatalogInputs.Clear();
 
-        foreach (var x in til.Concat(ex.Where(x => x.Navn != "Kj.tillegg")))
+        foreach (var x in til.Concat(ex.Where(x =>
+                     x.Navn != "Kj.tillegg" &&
+                     !IsPricedSpecialToppingName(x.Navn))))
         {
             var ci = new CatalogInput(x.Navn, x.Pris);
             ci.PropertyChanged += CatalogInputChanged;
@@ -302,6 +345,8 @@ public partial class OrderViewModel : ObservableObject
             else
                 store[ti.Navn] = raw;
         }
+
+        RefreshActivePizzaPrice();
     }
 
     private Dictionary<string, string> GetCurrentToppingStore()
@@ -588,7 +633,7 @@ public partial class OrderViewModel : ObservableObject
 
         foreach (var kv in toppingValues)
         {
-            if (!_pricedToppingUnitPrices.TryGetValue(kv.Key, out var unitPrice))
+            if (!TryGetPricedToppingUnitPrice(kv.Key, out var unitPrice))
                 continue;
 
             var raw = (kv.Value ?? "").Trim();
