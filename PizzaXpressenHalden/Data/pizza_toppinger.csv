@@ -1,30 +1,31 @@
-﻿navn,kjøkken_navn,sortering,justerbar
-Ananas,Ananas,1,1
-Bacon,Bacon,2,1
-Biff,Biff,3,1
-Cherrytomater,Cherrytomater,4,1
-Chiliflakes,Chiliflakes,5,1
-Chorizopølse,Chorizopølse,6,1
-Crispy chilibacon,Crispy chilibacon,7,1
-Fersk champignon,Fersk champignon,8,1
-Hvitløkskjøttboller,Hvitløkskjøttboller,9,1
-Jalapeños,Jalapeños,10,1
-Kebabkjøtt,Kebabkjøtt,11,1
-Kjøttdeig,Kjøttdeig,12,1
-Løk,Løk,13,1
-Mais,Mais,14,1
-Marinert kylling,Marinert kylling,15,1
-Marinert pepperbiff,Marinert pepperbiff,16,1
-Nacho-chips,Nacho-chips,17,1
-Oliven,Oliven,18,1
-Oregano-dryss,Oregano-dryss,19,1
-Paprika,Paprika,20,1
-Peppermiks,Peppermiks,21,1
-Pepperoni,Pepperoni,22,1
-Rødløk,Rødløk,23,1
-Salami,Salami,24,1
-Skinke,Skinke,25,1
-Skinketerninger,Skinketerninger,26,1
-Spekepepperoni,Spekepepperoni,27,1
-X-Kjøtt,X-Kjøtt,28,1
-X-Ost,X-Ost,29,1
+navn,kjokkennavn,sortering,justerbar
+Ananas,Ananas,1,true
+Bacon,Bacon,2,true
+Biff,Biff,3,true
+Cherrytomater,Cherrytomater,4,true
+Chiliflakes,Chiliflakes,5,true
+Chorizopølse,Chorizopølse,6,true
+Crispy chilibacon,Crispy chilibacon,7,true
+Fersk champignon,Fersk champignon,8,true
+Hvitløkskjøttboller,Hvitløkskjøttboller,9,true
+Jalapeños,Jalapeños,10,true
+Kebabkjøtt,Kebabkjøtt,11,true
+Kjøttdeig,Kjøttdeig,12,true
+Løk,Løk,13,true
+Mais,Mais,14,true
+Marinert kylling,Marinert kylling,15,true
+Marinert pepperbiff,Marinert pepperbiff,16,true
+Nacho-chips,Nacho-chips,17,true
+Oliven,Oliven,18,true
+Oregano-dryss,Oregano-dryss,19,true
+Paprika,Paprika,20,true
+Peppermiks,Peppermiks,21,true
+Pepperoni,Pepperoni,22,true
+Rødløk,Rødløk,23,true
+Salami,Salami,24,true
+Skinke,Skinke,25,true
+Skinketerninger,Skinketerninger,26,true
+Spekepepperoni,Spekepepperoni,27,true
+Tandorimarinert kylling,Tandorimarinert kylling,28,true
+X-Kjøtt,X-Kjøtt,29,true
+X-Ost,X-Ost,30,true
