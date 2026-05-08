@@ -792,7 +792,7 @@ public class PrintService
         leftFooter.Children.Add(Text($"Dato/tid: {createdLocal:dd.MM.yyyy} kl. {createdLocal:HH:mm}", false, 10));
         leftFooter.Children.Add(Text(scheduled != null ? $"Levering: {scheduled:HH:mm}" : "Levering: -", false, 10));
 
-        var rightFooter = Text($"Total: {total:0.00} kr", true, 14);
+        var rightFooter = Text($"Total: {total:0.00}", true, 14);
         rightFooter.TextAlignment = TextAlignment.Right;
 
         Grid.SetColumn(leftFooter, 0);

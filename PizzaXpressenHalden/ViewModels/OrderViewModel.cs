@@ -135,12 +135,16 @@ public partial class OrderViewModel : ObservableObject
     public partial class ToppingInput : ObservableObject
     {
         public string Navn { get; }
+        public bool IsPriced { get; }
 
         [ObservableProperty] private string input = "";
+        [ObservableProperty] private string unitPriceText = "";
 
-        public ToppingInput(string navn)
+        public ToppingInput(string navn, bool isPriced, decimal unitPrice)
         {
             Navn = navn;
+            IsPriced = isPriced;
+            UnitPriceText = isPriced ? unitPrice.ToString("0.##", CultureInfo.InvariantCulture) : "";
         }
     }
 
@@ -202,7 +206,17 @@ public partial class OrderViewModel : ObservableObject
         _ = AutoLoadPizzaAsync(value, token);
     }
 
-    partial void OnSizeTextChanged(string value) => RefreshActivePizzaPrice();
+    partial void OnSizeTextChanged(string value)
+    {
+        RefreshActivePizzaPrice();
+        RecalcTotal();
+    }
+
+    partial void OnActivePizzaQuantityChanged(int value)
+    {
+        RefreshActivePizzaPrice();
+        RecalcTotal();
+    }
 
     private static string NormalizePricedToppingName(string? name)
     {
@@ -257,14 +271,6 @@ public partial class OrderViewModel : ObservableObject
             .Select(x => x.Navn)
             .ToListAsync();
 
-        ToppingInputs.Clear();
-        foreach (var t in toppings)
-        {
-            var ti = new ToppingInput(t);
-            ti.PropertyChanged += ToppingInputChanged;
-            ToppingInputs.Add(ti);
-        }
-
         var til = await _db.Tilbehor
             .AsNoTracking()
             .Where(x => x.IsActive)
@@ -287,10 +293,23 @@ public partial class OrderViewModel : ObservableObject
             .ToListAsync();
 
         _pricedToppingUnitPrices.Clear();
+
         foreach (var x in ex)
         {
             if (IsPricedSpecialToppingName(x.Navn))
                 _pricedToppingUnitPrices[x.Navn] = x.Pris;
+        }
+
+        ToppingInputs.Clear();
+
+        foreach (var t in toppings)
+        {
+            var isPriced = IsPricedSpecialToppingName(t);
+            TryGetPricedToppingUnitPrice(t, out var unitPrice);
+
+            var ti = new ToppingInput(t, isPriced, unitPrice);
+            ti.PropertyChanged += ToppingInputChanged;
+            ToppingInputs.Add(ti);
         }
 
         var driverFee = ex.FirstOrDefault(x => x.Navn == "Kj.tillegg");
@@ -324,8 +343,26 @@ public partial class OrderViewModel : ObservableObject
     private void ToppingInputChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (_suppressToppingEvents) return;
-        if (e.PropertyName != nameof(ToppingInput.Input)) return;
         if (sender is not ToppingInput ti) return;
+
+        if (e.PropertyName == nameof(ToppingInput.UnitPriceText))
+        {
+            if (ti.IsPriced)
+            {
+                var rawPrice = (ti.UnitPriceText ?? "").Trim().Replace(",", ".");
+
+                if (decimal.TryParse(rawPrice, NumberStyles.Number, CultureInfo.InvariantCulture, out var price) && price >= 0)
+                {
+                    _pricedToppingUnitPrices[ti.Navn] = price;
+                    RefreshActivePizzaPrice();
+                    RecalcTotal();
+                }
+            }
+
+            return;
+        }
+
+        if (e.PropertyName != nameof(ToppingInput.Input)) return;
 
         var store = GetCurrentToppingStore();
         var raw = (ti.Input ?? "").Trim();
@@ -347,6 +384,7 @@ public partial class OrderViewModel : ObservableObject
         }
 
         RefreshActivePizzaPrice();
+        RecalcTotal();
     }
 
     private Dictionary<string, string> GetCurrentToppingStore()
@@ -546,6 +584,7 @@ public partial class OrderViewModel : ObservableObject
         if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var nr))
         {
             ClearActivePizzaDraft();
+            RecalcTotal();
             return;
         }
 
@@ -559,6 +598,7 @@ public partial class OrderViewModel : ObservableObject
         if (pizza == null)
         {
             ClearActivePizzaDraft();
+            RecalcTotal();
             return;
         }
 
@@ -575,6 +615,7 @@ public partial class OrderViewModel : ObservableObject
 
         ApplyCurrentToppingStateToBoxes();
         RefreshActivePizzaPrice();
+        RecalcTotal();
     }
 
     private static bool TryParseSplit(string raw, out int p1, out int p2)
@@ -606,6 +647,7 @@ public partial class OrderViewModel : ObservableObject
         {
             ClearSplitDraft();
             ClearActivePizzaDraft();
+            RecalcTotal();
             return;
         }
 
@@ -625,6 +667,7 @@ public partial class OrderViewModel : ObservableObject
 
         RefreshActivePizzaPrice();
         RefreshSplitPrice(p1, p2);
+        RecalcTotal();
     }
 
     private decimal CalculatePricedToppingExtra(Dictionary<string, string> toppingValues)
@@ -726,6 +769,8 @@ public partial class OrderViewModel : ObservableObject
         UpdateActiveHalfLabel();
         UpdateDisplayIngredientsForActiveHalf();
         ApplyCurrentToppingStateToBoxes();
+        RefreshActivePizzaPrice();
+        RecalcTotal();
     }
 
     private void UpdateActiveHalfLabel() => ActiveHalfLabel = _activeHalf == 1 ? "Redigerer halvdel 1" : "Redigerer halvdel 2";
@@ -981,6 +1026,7 @@ public partial class OrderViewModel : ObservableObject
 
         ApplyCurrentToppingStateToBoxes();
         RefreshActivePizzaPrice();
+        RecalcTotal();
     }
 
     private void CancelPizzaEdit()
@@ -1073,7 +1119,20 @@ public partial class OrderViewModel : ObservableObject
         }
     }
 
-    private void RecalcTotal() => Total = Items.Sum(i => i.UnitPrice * i.Quantity);
+    private void RecalcTotal()
+    {
+        var totalFromCart = Items.Sum(i => i.UnitPrice * i.Quantity);
+
+        if (ActivePizza != null || IsSplitPizza)
+        {
+            var pizzaQuantity = Math.Max(1, ActivePizzaQuantity);
+            Total = totalFromCart + (ActivePizzaPrice * pizzaQuantity);
+        }
+        else
+        {
+            Total = totalFromCart;
+        }
+    }
 
     private async Task SaveAndPrintAsync()
     {

@@ -549,6 +549,7 @@
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Standardingredienser markeres med x."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Skriv - eller -- for å fjerne en standardingrediens."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Skriv + eller ++ for å legge til ekstra topping."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• X-Ost og X-Kjøtt bruker faste priser fra systemet. Skriv bare antall i boksen."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Delt pizza: skriv for eksempel D11/14 og bruk knappene 1 og 2 for å redigere hver halvdel."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Tilbehør legges automatisk i handlekurven når antall skrives inn."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• PageDown legger til pizza, og PageUp går til handlekurven for å velge pizza som skal redigeres."/>
