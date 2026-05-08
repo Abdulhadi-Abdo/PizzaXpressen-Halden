@@ -81,18 +81,19 @@ public class CsvImportService
 
     private static List<T> ReadCsv<T>(string path)
     {
-        var cfg = new CsvConfiguration(CultureInfo.InvariantCulture)
+        var cfg = new CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture)
         {
             Delimiter = ",",
             HasHeaderRecord = true,
             BadDataFound = null,
             MissingFieldFound = null,
             HeaderValidated = null,
-            PrepareHeaderForMatch = args => args.Header.Trim()
+            PrepareHeaderForMatch = args => args.Header?.Trim().ToLowerInvariant()
         };
 
-        using var reader = new StreamReader(path, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        using var reader = new StreamReader(path);
         using var csv = new CsvReader(reader, cfg);
+
         return csv.GetRecords<T>().ToList();
     }
 }
