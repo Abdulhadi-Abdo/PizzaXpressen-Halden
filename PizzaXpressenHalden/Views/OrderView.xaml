@@ -400,9 +400,11 @@
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
-                            Padding="10">
-                        <StackPanel KeyboardNavigation.TabNavigation="Continue"
-                                    KeyboardNavigation.DirectionalNavigation="Continue">
+                            Padding="10"
+                            KeyboardNavigation.TabNavigation="None"
+                            KeyboardNavigation.DirectionalNavigation="None">
+                        <StackPanel KeyboardNavigation.TabNavigation="None"
+                                    KeyboardNavigation.DirectionalNavigation="None">
                             <TextBlock Text="HANDLEKURV"
                                        FontSize="18"
                                        FontWeight="Bold"
@@ -418,7 +420,8 @@
                                       FontSize="12"
                                       RowHeight="22"
                                       ColumnHeaderHeight="24"
-                                      TabIndex="40">
+                                      TabIndex="40"
+                                      IsTabStop="False">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Vare"
                                                         Binding="{Binding ItemName}"
@@ -448,7 +451,8 @@
                                         Padding="8,2"
                                         Margin="0,0,10,0"
                                         FontSize="12"
-                                        TabIndex="41"/>
+                                        TabIndex="41"
+                                        IsTabStop="False"/>
 
                                 <Button x:Name="RemoveItemButton"
                                         Content="Fjern valgt"
@@ -457,7 +461,8 @@
                                         Height="26"
                                         Padding="8,2"
                                         FontSize="12"
-                                        TabIndex="42"/>
+                                        TabIndex="42"
+                                        IsTabStop="False"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -546,7 +551,7 @@
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Skriv + eller ++ for å legge til ekstra topping."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Delt pizza: skriv for eksempel D11/14 og bruk knappene 1 og 2 for å redigere hver halvdel."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Tilbehør legges automatisk i handlekurven når antall skrives inn."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• PageDown legger til pizza, og PageUp redigerer pizza."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• PageDown legger til pizza, og PageUp går til handlekurven for å velge pizza som skal redigeres."/>
                     <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Trykk PRINT når bestillingen er ferdig kontrollert."/>
 
                     <Button Content="Lukk"
