@@ -10,6 +10,7 @@ using System.Printing;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -177,10 +178,13 @@ public class PrintService
             !IsPizzaItem(x) &&
             !string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase));
 
+        int columns = extraLines > 14 ? 3 : 2;
+        int visibleRows = extraLines == 0 ? 0 : (int)Math.Ceiling(extraLines / (double)columns);
+
         double total = 0;
         total += 78;
         total += 30;
-        total += Math.Max(0, extraLines) * 14;
+        total += Math.Max(0, visibleRows) * 14;
         total += 40;
 
         if (!string.IsNullOrWhiteSpace(userNotes))
@@ -775,12 +779,9 @@ public class PrintService
         root.Children.Add(Text($"## {pizzaCount} Pizza{(pizzaCount == 1 ? "" : "er")} skal bringes", true, 17));
         root.Children.Add(Spacer(7));
 
-        foreach (var item in order.Items.Where(x =>
-                     !IsPizzaItem(x) &&
-                     !string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase)))
-        {
-            root.Children.Add(Text($"{item.Quantity}x {DisplayItemName(item.ItemName)}", false, 11));
-        }
+        var driverExtras = BuildDriverExtrasColumns(order);
+        if (driverExtras != null)
+            root.Children.Add(driverExtras);
 
         root.Children.Add(Spacer(10));
 
@@ -818,6 +819,40 @@ public class PrintService
         }
 
         return root;
+    }
+
+    private static UIElement? BuildDriverExtrasColumns(Order order)
+    {
+        var extras = order.Items
+            .Where(x =>
+                !IsPizzaItem(x) &&
+                !string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase))
+            .Select(x => $"{x.Quantity}x {DisplayItemName(x.ItemName)}")
+            .ToList();
+
+        if (extras.Count == 0)
+            return null;
+
+        int columns = extras.Count > 14 ? 3 : 2;
+
+        var grid = new UniformGrid
+        {
+            Columns = columns,
+            Width = 320,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Margin = new Thickness(0)
+        };
+
+        foreach (var extra in extras)
+        {
+            var tb = Text(extra, false, 10);
+            tb.TextWrapping = TextWrapping.NoWrap;
+            tb.Margin = new Thickness(0, 0, 8, 0);
+
+            grid.Children.Add(tb);
+        }
+
+        return grid;
     }
 
     private static Dictionary<string, string> ParseKitchenCustomNote(string? note)
