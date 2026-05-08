@@ -18,7 +18,7 @@ public partial class PizzaRegisterViewModel : ObservableObject
 
     public ObservableCollection<Pizza> Pizzas { get; } = new();
     public ObservableCollection<PriceRegistryItem> CatalogItems { get; } = new();
-    public ObservableCollection<Topping> Toppings { get; } = new();
+    public ObservableCollection<ToppingEditorItem> Toppings { get; } = new();
 
     public ObservableCollection<string> CatalogCategories { get; } = new()
     {
@@ -30,7 +30,7 @@ public partial class PizzaRegisterViewModel : ObservableObject
 
     [ObservableProperty] private Pizza? selectedPizza;
     [ObservableProperty] private PriceRegistryItem? selectedCatalogItem;
-    [ObservableProperty] private Topping? selectedTopping;
+    [ObservableProperty] private ToppingEditorItem? selectedTopping;
 
     public IAsyncRelayCommand RefreshCommand { get; }
     public IRelayCommand NewCommand { get; }
@@ -81,7 +81,7 @@ public partial class PizzaRegisterViewModel : ObservableObject
         SaveCatalogCommand.NotifyCanExecuteChanged();
     }
 
-    partial void OnSelectedToppingChanged(Topping? value)
+    partial void OnSelectedToppingChanged(ToppingEditorItem? value)
     {
         DeleteToppingCommand.NotifyCanExecuteChanged();
         SaveToppingCommand.NotifyCanExecuteChanged();
@@ -170,14 +170,32 @@ public partial class PizzaRegisterViewModel : ObservableObject
 
         Toppings.Clear();
 
-        var list = await _db.Toppings
+        var toppingList = await _db.Toppings
             .AsNoTracking()
+            .Where(x => x.Navn != "Tacokjøtt" && x.Navn != "Flakes")
             .OrderBy(x => x.Sortering)
             .ThenBy(x => x.Navn)
             .ToListAsync();
 
-        foreach (var t in list)
-            Toppings.Add(t);
+        var extras = await _db.Extras
+            .AsNoTracking()
+            .ToListAsync();
+
+        foreach (var t in toppingList)
+        {
+            var extra = FindMatchingExtra(extras, t.Navn);
+
+            Toppings.Add(new ToppingEditorItem
+            {
+                Id = t.Id,
+                Navn = t.Navn,
+                KjokkenNavn = t.KjokkenNavn,
+                Sortering = t.Sortering,
+                Justerbar = t.Justerbar,
+                Pris = extra?.Pris ?? 0m,
+                HasPrice = IsPricedSpecialTopping(t.Navn)
+            });
+        }
 
         SelectedTopping = Toppings.FirstOrDefault();
     }
@@ -185,6 +203,7 @@ public partial class PizzaRegisterViewModel : ObservableObject
     private async Task NormalizeToppingOrderAsync()
     {
         var list = await _db.Toppings
+            .Where(x => x.Navn != "Tacokjøtt" && x.Navn != "Flakes")
             .OrderBy(x => x.Sortering)
             .ThenBy(x => x.Navn)
             .ToListAsync();
@@ -294,12 +313,9 @@ public partial class PizzaRegisterViewModel : ObservableObject
     {
         var description = (pizza.Beskrivelse ?? "").Trim();
 
-        var existingPizza = await _db.Pizzas
-            .Include(p => p.PizzaToppings)
-            .FirstAsync(p => p.Id == pizza.Id);
-
         var allToppings = await _db.Toppings
             .AsNoTracking()
+            .Where(x => x.Navn != "Tacokjøtt" && x.Navn != "Flakes")
             .OrderBy(x => x.Sortering)
             .ThenBy(x => x.Navn)
             .ToListAsync();
@@ -372,11 +388,10 @@ public partial class PizzaRegisterViewModel : ObservableObject
         var escaped = Regex.Escape(term).Replace("\\ ", @"\s+");
         var pattern = $@"(?<!\p{{L}}){escaped}(?!\p{{L}})";
 
-        return System.Text.RegularExpressions.Regex.IsMatch(
+        return Regex.IsMatch(
             text,
             pattern,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
-            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
     private async Task DeleteAsync()
@@ -393,8 +408,7 @@ public partial class PizzaRegisterViewModel : ObservableObject
 
         if (SelectedPizza.Id == 0)
         {
-            var draft = SelectedPizza;
-            Pizzas.Remove(draft);
+            Pizzas.Remove(SelectedPizza);
             SelectedPizza = Pizzas.FirstOrDefault();
             return;
         }
@@ -462,31 +476,14 @@ public partial class PizzaRegisterViewModel : ObservableObject
             switch (category)
             {
                 case "Drikke":
-                    _db.Drinks.Add(new Drink
-                    {
-                        Navn = navn,
-                        Pris = SelectedCatalogItem.Pris,
-                        IsActive = SelectedCatalogItem.IsActive
-                    });
+                    _db.Drinks.Add(new Drink { Navn = navn, Pris = SelectedCatalogItem.Pris, IsActive = SelectedCatalogItem.IsActive });
                     break;
-
                 case "Tilbehør":
-                    _db.Tilbehor.Add(new Tilbehor
-                    {
-                        Navn = navn,
-                        Pris = SelectedCatalogItem.Pris,
-                        IsActive = SelectedCatalogItem.IsActive
-                    });
+                    _db.Tilbehor.Add(new Tilbehor { Navn = navn, Pris = SelectedCatalogItem.Pris, IsActive = SelectedCatalogItem.IsActive });
                     break;
-
                 case "Ekstra":
                 case "Kjøring":
-                    _db.Extras.Add(new Extra
-                    {
-                        Navn = navn,
-                        Pris = SelectedCatalogItem.Pris,
-                        IsActive = SelectedCatalogItem.IsActive
-                    });
+                    _db.Extras.Add(new Extra { Navn = navn, Pris = SelectedCatalogItem.Pris, IsActive = SelectedCatalogItem.IsActive });
                     break;
             }
 
@@ -508,7 +505,6 @@ public partial class PizzaRegisterViewModel : ObservableObject
                     }
                     break;
                 }
-
             case "Tilbehør":
                 {
                     var entity = await _db.Tilbehor.FirstOrDefaultAsync(x => x.Id == SelectedCatalogItem.Id);
@@ -520,7 +516,6 @@ public partial class PizzaRegisterViewModel : ObservableObject
                     }
                     break;
                 }
-
             case "Ekstra":
             case "Kjøring":
                 {
@@ -566,14 +561,12 @@ public partial class PizzaRegisterViewModel : ObservableObject
                     if (entity != null) _db.Drinks.Remove(entity);
                     break;
                 }
-
             case "Tilbehør":
                 {
                     var entity = await _db.Tilbehor.FirstOrDefaultAsync(x => x.Id == SelectedCatalogItem.Id);
                     if (entity != null) _db.Tilbehor.Remove(entity);
                     break;
                 }
-
             case "Ekstra":
             case "Kjøring":
                 {
@@ -591,13 +584,15 @@ public partial class PizzaRegisterViewModel : ObservableObject
     {
         int nextSort = (Toppings.Count == 0) ? 1 : Toppings.Max(x => x.Sortering) + 1;
 
-        var topping = new Topping
+        var topping = new ToppingEditorItem
         {
             Id = 0,
             Navn = "",
             KjokkenNavn = "",
             Sortering = nextSort,
-            Justerbar = true
+            Justerbar = true,
+            Pris = 0m,
+            HasPrice = false
         };
 
         Toppings.Add(topping);
@@ -620,36 +615,76 @@ public partial class PizzaRegisterViewModel : ObservableObject
         if (kjokkenNavn.Length == 0)
             kjokkenNavn = navn;
 
+        Topping entity;
+
         if (SelectedTopping.Id == 0)
         {
-            _db.Toppings.Add(new Topping
+            entity = new Topping
             {
                 Navn = navn,
                 KjokkenNavn = kjokkenNavn,
                 Sortering = SelectedTopping.Sortering,
                 Justerbar = SelectedTopping.Justerbar
-            });
+            };
+
+            _db.Toppings.Add(entity);
+            await _db.SaveChangesAsync();
+        }
+        else
+        {
+            entity = await _db.Toppings.FirstOrDefaultAsync(x => x.Id == SelectedTopping.Id);
+            if (entity == null)
+            {
+                await LoadToppingsAsync();
+                return;
+            }
+
+            entity.Navn = navn;
+            entity.KjokkenNavn = kjokkenNavn;
+            entity.Sortering = SelectedTopping.Sortering;
+            entity.Justerbar = SelectedTopping.Justerbar;
 
             await _db.SaveChangesAsync();
-            await LoadToppingsAsync();
-            return;
         }
 
-        var entity = await _db.Toppings.FirstOrDefaultAsync(x => x.Id == SelectedTopping.Id);
-        if (entity == null)
+        await SyncSpecialToppingPriceAsync(navn, SelectedTopping.Pris);
+        await LoadToppingsAsync();
+        SelectedTopping = Toppings.FirstOrDefault(x => x.Navn == navn);
+    }
+
+    private async Task SyncSpecialToppingPriceAsync(string toppingName, decimal price)
+    {
+        if (!IsPricedSpecialTopping(toppingName))
+            return;
+
+        var extra = await _db.Extras.FirstOrDefaultAsync(x => x.Navn == toppingName);
+        if (extra == null)
         {
-            await LoadToppingsAsync();
-            return;
+            _db.Extras.Add(new Extra
+            {
+                Navn = toppingName,
+                Pris = price,
+                IsActive = true
+            });
         }
-
-        entity.Navn = navn;
-        entity.KjokkenNavn = kjokkenNavn;
-        entity.Sortering = SelectedTopping.Sortering;
-        entity.Justerbar = SelectedTopping.Justerbar;
+        else
+        {
+            extra.Pris = price;
+            extra.IsActive = true;
+        }
 
         await _db.SaveChangesAsync();
-        await LoadToppingsAsync();
-        SelectedTopping = Toppings.FirstOrDefault(x => x.Id == entity.Id);
+    }
+
+    private static bool IsPricedSpecialTopping(string? name)
+    {
+        return string.Equals(name, "X-Ost", StringComparison.CurrentCultureIgnoreCase) ||
+               string.Equals(name, "X-Kjøtt", StringComparison.CurrentCultureIgnoreCase);
+    }
+
+    private static Extra? FindMatchingExtra(List<Extra> extras, string? toppingName)
+    {
+        return extras.FirstOrDefault(x => string.Equals(x.Navn, toppingName, StringComparison.CurrentCultureIgnoreCase));
     }
 
     private async Task DeleteToppingAsync()
@@ -693,5 +728,16 @@ public partial class PizzaRegisterViewModel : ObservableObject
         [ObservableProperty] private string navn = "";
         [ObservableProperty] private decimal pris;
         [ObservableProperty] private bool isActive = true;
+    }
+
+    public partial class ToppingEditorItem : ObservableObject
+    {
+        [ObservableProperty] private int id;
+        [ObservableProperty] private string navn = "";
+        [ObservableProperty] private string kjokkenNavn = "";
+        [ObservableProperty] private int sortering;
+        [ObservableProperty] private bool justerbar = true;
+        [ObservableProperty] private decimal pris;
+        [ObservableProperty] private bool hasPrice;
     }
 }
