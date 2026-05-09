@@ -72,10 +72,11 @@ public class PrintService
         double pageHeight = MmToPx(297);
 
         double contentWidth = MmToPx(94);
+
         double left = (pageWidth - contentWidth) / 2.0;
 
-        double kitchenTop = 18;
-        double receiptTop = 410;
+        double kitchenTop = 51;
+        double receiptTop = 445;
         double driverTop = 760;
 
         double maxKitchenHeight = receiptTop - kitchenTop - 10;
@@ -139,20 +140,20 @@ public class PrintService
         int totalRows = toppings.Count + 2;
         double scale = GetKitchenTableScale(totalRows);
 
-        double baseHeaderHeight = 56;
+        double baseHeaderHeight = 38;
         double total = 0;
 
         total += baseHeaderHeight;
         total += 4;
-        total += 20 * scale;
-        total += 20 * scale;
+        total += 16 * scale;
+        total += 16 * scale;
 
         foreach (var topping in toppings)
             total += EstimateKitchenLabelRowHeight(DisplayItemName(topping)) * scale;
 
-        total += 6;
+        total += 4;
 
-        return Math.Max(245, total);
+        return Math.Max(185, total);
     }
 
     private double CalculateReceiptBlockHeight(Order order)
@@ -280,13 +281,18 @@ public class PrintService
         if (quantity <= 1)
             return numberText;
 
-        return $"{numberText} x {quantity}";
+        return $"{numberText}x{quantity}";
     }
 
     private static double GetKitchenTableScale(int totalRows)
     {
-        if (totalRows <= 15)
+        // totalRows = topping-rader + 2 header-rader.
+        // Tabellen krympes bare nok til å holde seg i kjøkkenområdet.
+        if (totalRows <= 14)
             return 1.0;
+
+        if (totalRows == 15)
+            return 0.96;
 
         if (totalRows == 16)
             return 0.92;
@@ -303,8 +309,39 @@ public class PrintService
         if (totalRows == 20)
             return 0.76;
 
-        double scale = 15.0 / totalRows;
-        return Math.Max(0.66, scale);
+        if (totalRows == 21)
+            return 0.72;
+
+        if (totalRows == 22)
+            return 0.68;
+
+        if (totalRows == 23)
+            return 0.64;
+
+        if (totalRows == 24)
+            return 0.61;
+
+        return 0.58;
+    }
+
+    private static double GetKitchenColumnScale(int pizzaCount)
+    {
+        if (pizzaCount <= 3)
+            return 1.0;
+
+        if (pizzaCount == 4)
+            return 0.90;
+
+        if (pizzaCount == 5)
+            return 0.82;
+
+        if (pizzaCount == 6)
+            return 0.76;
+
+        if (pizzaCount == 7)
+            return 0.70;
+
+        return 0.64;
     }
 
     private sealed class KitchenPizzaColumn
@@ -329,7 +366,6 @@ public class PrintService
             Margin = new Thickness(0)
         };
 
-        root.Children.Add(Text("KJØKKENLAPP", true, 12));
         root.Children.Add(Text($"{customerName} / {phone}", false, 11));
         root.Children.Add(Text(
             $"{deliveryFlag}: {order.Id}, Lapp: 1, Inn: {createdLocal:dd.MM HH:mm}, Leveres: {(scheduled != null ? scheduled.Value.ToString("dd.MM HH:mm") : "-")}",
@@ -489,7 +525,7 @@ public class PrintService
             .ToList();
 
         int totalRows = allToppings.Count + 2;
-        double scale = GetKitchenTableScale(totalRows);
+        double scale = Math.Min(GetKitchenTableScale(totalRows), GetKitchenColumnScale(pizzaColumns.Count));
 
         var grid = new Grid
         {
@@ -500,8 +536,8 @@ public class PrintService
 
         int pizzaCount = Math.Max(1, pizzaColumns.Count);
 
-        double totalTableWidth = 322;
-        double firstColumnWidth = 104;
+        double totalTableWidth = pizzaCount <= 2 ? 370 : 410;
+        double firstColumnWidth = pizzaCount <= 2 ? 170 : 145;
         double pizzaColumnWidth = (totalTableWidth - firstColumnWidth) / pizzaCount;
 
         grid.ColumnDefinitions.Add(new ColumnDefinition
@@ -526,23 +562,31 @@ public class PrintService
             for (int i = 0; i < cells.Count; i++)
             {
                 bool isFirstColumn = i == 0;
+                bool compactTable = scale < 1.0;
 
                 var tb = new TextBlock
                 {
                     Text = cells[i],
-                    FontFamily = new FontFamily("Consolas"),
-                    FontSize = isHeader ? 9.8 : 9.4,
-                    FontWeight = FontWeights.SemiBold,
+                    FontFamily = new FontFamily("Arial Black"),
+                    FontSize = compactTable
+                        ? (isHeader ? 11.6 : 12.0)
+                        : (isHeader ? 9.8 : 10.2),
+                    FontWeight = compactTable
+                        ? FontWeights.Black
+                        : FontWeights.Black,
+                    Foreground = Brushes.Black,
                     TextAlignment = isFirstColumn && !isHeader ? TextAlignment.Left : TextAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
                     TextWrapping = isFirstColumn && !isHeader ? TextWrapping.Wrap : TextWrapping.NoWrap,
-                    Padding = new Thickness(2, 1.5, 2, 1.5)
+                    Padding = compactTable
+                        ? new Thickness(1.4, 0.4, 1.4, 0.4)
+                        : new Thickness(1.5, 0.8, 1.5, 0.8)
                 };
 
                 var border = new Border
                 {
-                    BorderBrush = Brushes.Black,
-                    BorderThickness = new Thickness(1.0),
+                    BorderBrush = compactTable ? Brushes.Black : Brushes.Black,
+                    BorderThickness = compactTable ? new Thickness(0.40) : new Thickness(0.70),
                     Child = tb
                 };
 
