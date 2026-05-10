@@ -12,13 +12,20 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="12">
+    <UserControl.InputBindings>
+        <KeyBinding Key="PageDown" Command="{Binding AddOrUpdatePizzaCommand}"/>
+    </UserControl.InputBindings>
+
+    <Grid Margin="12"
+          KeyboardNavigation.TabNavigation="Continue"
+          KeyboardNavigation.DirectionalNavigation="Continue">
         <Border BorderBrush="#2b7a2b"
                 BorderThickness="2"
                 Padding="10"
                 CornerRadius="6"
                 Background="White">
-            <Grid>
+            <Grid KeyboardNavigation.TabNavigation="Continue"
+                  KeyboardNavigation.DirectionalNavigation="Continue">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -26,21 +33,23 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- ROW 0 -->
-                <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid Grid.Row="0" Margin="0,0,0,10"
+                      KeyboardNavigation.TabNavigation="Continue"
+                      KeyboardNavigation.DirectionalNavigation="Continue">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="2.0*"/>
                         <ColumnDefinition Width="4.0*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- BESTILLING -->
-                    <Border Grid.Column="0"
+                    <Border x:Name="BestillingPanel"
+                            Grid.Column="0"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10"
                             Margin="0,0,10,0">
-                        <Grid>
+                        <Grid KeyboardNavigation.TabNavigation="Continue"
+                              KeyboardNavigation.DirectionalNavigation="Continue">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
@@ -54,24 +63,67 @@
                                            Foreground="#2b7a2b"
                                            Margin="0,0,0,8"/>
 
-                                <UniformGrid Columns="2" Margin="0,0,0,8">
-                                    <TextBlock Text="Størrelse (M/L/G)" Foreground="#2b7a2b" FontSize="13"/>
-                                    <TextBox Text="{Binding SizeText, UpdateSourceTrigger=PropertyChanged}"
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="10"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0"
+                                               Grid.Column="0"
+                                               Text="Størrelse (M/S/G)"
+                                               Foreground="#2b7a2b"
+                                               FontSize="13"
+                                               Margin="0,0,0,4"/>
+
+                                    <TextBlock Grid.Row="0"
+                                               Grid.Column="2"
+                                               Text="Pizza nr"
+                                               Foreground="#2b7a2b"
+                                               FontSize="13"
+                                               Margin="0,0,0,4"/>
+
+                                    <TextBox x:Name="SizeBox"
+                                             Grid.Row="1"
+                                             Grid.Column="0"
+                                             Text="{Binding SizeText, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="0"
                                              CharacterCasing="Upper"/>
 
-                                    <TextBlock Text="Pizza nr" Foreground="#2b7a2b" FontSize="13"/>
-                                    <TextBox Text="{Binding PizzaNrText, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBox x:Name="PizzaNrBox"
+                                             Grid.Row="1"
+                                             Grid.Column="2"
+                                             Text="{Binding PizzaNrText, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="1"
                                              CharacterCasing="Upper"/>
 
-                                    <TextBlock Text="Antall" Foreground="#2b7a2b" FontSize="13"/>
-                                    <TextBox Text="{Binding ActivePizzaQuantity, UpdateSourceTrigger=PropertyChanged}"
+                                    <TextBlock Grid.Row="3"
+                                               Grid.Column="0"
+                                               Grid.ColumnSpan="3"
+                                               Text="Antall"
+                                               Foreground="#2b7a2b"
+                                               FontSize="13"
+                                               Margin="0,0,0,4"/>
+
+                                    <TextBox x:Name="AntallBox"
+                                             Grid.Row="4"
+                                             Grid.Column="0"
+                                             Grid.ColumnSpan="3"
+                                             Text="{Binding ActivePizzaQuantity, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="16"
                                              TabIndex="2"/>
-                                </UniformGrid>
+                                </Grid>
 
                                 <TextBlock Text="{Binding ActivePizzaTitle}"
                                            FontSize="16"
@@ -83,7 +135,6 @@
                                            Margin="0,0,0,4"/>
                             </StackPanel>
 
-                            <!-- Ingredienser -->
                             <Border Grid.Row="1"
                                     BorderBrush="#d9d9d9"
                                     BorderThickness="1"
@@ -158,13 +209,14 @@
                         </Grid>
                     </Border>
 
-                    <!-- TOPPING -->
-                    <Border Grid.Column="1"
+                    <Border x:Name="ToppingPanel"
+                            Grid.Column="1"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10">
-                        <StackPanel>
+                        <StackPanel KeyboardNavigation.TabNavigation="Continue"
+                                    KeyboardNavigation.DirectionalNavigation="Continue">
                             <TextBlock Text="TOPPING (+ / - / x)"
                                        FontSize="18"
                                        FontWeight="Bold"
@@ -201,42 +253,39 @@
                     </Border>
                 </Grid>
 
-                <!-- ROW 1 -->
-                <Grid Grid.Row="1" Margin="0,0,0,10">
+                <Grid Grid.Row="1" Margin="0,0,0,10"
+                      KeyboardNavigation.TabNavigation="Continue"
+                      KeyboardNavigation.DirectionalNavigation="Continue">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1.85*"/>
                         <ColumnDefinition Width="1.15*"/>
                         <ColumnDefinition Width="2.70*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- TILBEHØR -->
-                    <Border Grid.Column="0"
+                    <Border x:Name="TilbehorPanel"
+                            Grid.Column="0"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10"
                             Margin="0,0,10,0">
-                        <StackPanel>
+                        <StackPanel KeyboardNavigation.TabNavigation="Continue"
+                                    KeyboardNavigation.DirectionalNavigation="Continue">
                             <TextBlock Text="TILBEHØR (skriv antall i boksen)"
                                        FontSize="16"
                                        FontWeight="Bold"
                                        Foreground="#2b7a2b"
                                        Margin="0,0,0,6"/>
 
-                            <Grid>
+                            <Grid KeyboardNavigation.TabNavigation="Continue"
+                                  KeyboardNavigation.DirectionalNavigation="Continue">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="12"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- VENSTRE: tilbehør + ekstra -->
                                 <ItemsControl Grid.Column="0" ItemsSource="{Binding LeftCatalogInputs}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Columns="1"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border BorderBrush="#e0e0e0" BorderThickness="1" Margin="2" Padding="4">
@@ -262,13 +311,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <!-- HØYRE: drikke -->
                                 <ItemsControl Grid.Column="2" ItemsSource="{Binding RightCatalogInputs}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <UniformGrid Columns="1"/>
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Border BorderBrush="#e0e0e0" BorderThickness="1" Margin="2" Padding="4">
@@ -297,14 +340,15 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- KUNDE -->
-                    <Border Grid.Column="1"
+                    <Border x:Name="KundePanel"
+                            Grid.Column="1"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="10"
                             Margin="0,0,10,0">
-                        <StackPanel>
+                        <StackPanel KeyboardNavigation.TabNavigation="Continue"
+                                    KeyboardNavigation.DirectionalNavigation="Continue">
                             <TextBlock Text="KUNDE"
                                        FontSize="18"
                                        FontWeight="Bold"
@@ -339,28 +383,36 @@
                                      TabIndex="24"/>
 
                             <TextBlock Text="Type (B/H)" Foreground="#2b7a2b" FontSize="13" Margin="0,8,0,0"/>
-                            <TextBox Text="{Binding DeliveryInputText, UpdateSourceTrigger=PropertyChanged}"
+                            <TextBox x:Name="DeliveryTypeBox"
+                                     Text="{Binding DeliveryInputText, UpdateSourceTrigger=PropertyChanged}"
                                      FontSize="16"
                                      Width="60"
                                      TabIndex="25"
-                                     CharacterCasing="Upper"/>
+                                     CharacterCasing="Upper"
+                                     MaxLength="1"
+                                     PreviewTextInput="DeliveryTypeBox_PreviewTextInput"
+                                     PreviewKeyDown="DeliveryTypeBox_PreviewKeyDown"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- HANDLEKURV -->
-                    <Border Grid.Column="2"
+                    <Border x:Name="HandlekurvPanel"
+                            Grid.Column="2"
                             BorderBrush="#2b7a2b"
                             BorderThickness="1"
                             CornerRadius="6"
-                            Padding="10">
-                        <StackPanel>
+                            Padding="10"
+                            KeyboardNavigation.TabNavigation="None"
+                            KeyboardNavigation.DirectionalNavigation="None">
+                        <StackPanel KeyboardNavigation.TabNavigation="None"
+                                    KeyboardNavigation.DirectionalNavigation="None">
                             <TextBlock Text="HANDLEKURV"
                                        FontSize="18"
                                        FontWeight="Bold"
                                        Foreground="#2b7a2b"
                                        Margin="0,0,0,6"/>
 
-                            <DataGrid ItemsSource="{Binding Items}"
+                            <DataGrid x:Name="HandlekurvGrid"
+                                      ItemsSource="{Binding Items}"
                                       SelectedItem="{Binding SelectedItem}"
                                       AutoGenerateColumns="False"
                                       CanUserAddRows="False"
@@ -368,37 +420,54 @@
                                       FontSize="12"
                                       RowHeight="22"
                                       ColumnHeaderHeight="24"
-                                      TabIndex="40">
+                                      TabIndex="40"
+                                      IsTabStop="False">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Vare" Binding="{Binding ItemName}" Width="*"/>
-                                    <DataGridTextColumn Header="Ant" Binding="{Binding Quantity}" Width="45"/>
-                                    <DataGridTextColumn Header="Pris" Binding="{Binding UnitPrice}" Width="55"/>
-                                    <DataGridTextColumn Header="Notat" Binding="{Binding Note}" Width="130"/>
+                                    <DataGridTextColumn Header="Vare"
+                                                        Binding="{Binding ItemName}"
+                                                        Width="1.9*"
+                                                        MinWidth="170"/>
+                                    <DataGridTextColumn Header="Ant"
+                                                        Binding="{Binding Quantity}"
+                                                        Width="50"
+                                                        MinWidth="50"/>
+                                    <DataGridTextColumn Header="Pris"
+                                                        Binding="{Binding UnitPrice}"
+                                                        Width="65"
+                                                        MinWidth="65"/>
+                                    <DataGridTextColumn Header="Notat"
+                                                        Binding="{Binding Note}"
+                                                        Width="3.1*"
+                                                        MinWidth="240"/>
                                 </DataGrid.Columns>
                             </DataGrid>
 
                             <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                <Button Content="Rediger valgt pizza"
+                                <Button x:Name="EditPizzaButton"
+                                        Content="Rediger valgt pizza"
                                         Command="{Binding EditSelectedPizzaCommand}"
                                         Width="135"
                                         Height="26"
                                         Padding="8,2"
                                         Margin="0,0,10,0"
                                         FontSize="12"
-                                        TabIndex="41"/>
-                                <Button Content="Fjern valgt"
+                                        TabIndex="41"
+                                        IsTabStop="False"/>
+
+                                <Button x:Name="RemoveItemButton"
+                                        Content="Fjern valgt"
                                         Command="{Binding RemoveSelectedItemCommand}"
                                         Width="110"
                                         Height="26"
                                         Padding="8,2"
                                         FontSize="12"
-                                        TabIndex="42"/>
+                                        TabIndex="42"
+                                        IsTabStop="False"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
                 </Grid>
 
-                <!-- MERKNADER -->
                 <Border Grid.Row="2" BorderBrush="#2b7a2b" BorderThickness="1" CornerRadius="6" Padding="8" Margin="0,0,0,8">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -406,16 +475,17 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <TextBlock Text="MERKNADER" FontSize="14" FontWeight="Bold" Foreground="#2b7a2b" Margin="0,0,0,6"/>
-                        <TextBox Grid.Row="1"
+                        <TextBox x:Name="NotesBox"
+                                 Grid.Row="1"
                                  Text="{Binding OrderNotesText, UpdateSourceTrigger=PropertyChanged}"
                                  AcceptsReturn="True"
+                                 AcceptsTab="True"
                                  TextWrapping="Wrap"
                                  Height="55"
                                  VerticalScrollBarVisibility="Auto"/>
                     </Grid>
                 </Border>
 
-                <!-- TOTAL + PRINT + INFO ICON -->
                 <Grid Grid.Row="3">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -457,7 +527,6 @@
             </Grid>
         </Border>
 
-        <!-- INFO POPUP -->
         <Grid Visibility="{Binding IsInfoPopupOpen, Converter={StaticResource BoolToVis}}"
               Background="#80000000"
               Panel.ZIndex="100">
@@ -477,18 +546,14 @@
                                Foreground="#2b7a2b"
                                Margin="0,0,0,12"/>
 
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Standardingredienser markeres med x."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Skriv - eller -- for å fjerne en standardingrediens."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Skriv + eller ++ for å legge til ekstra topping."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Delt pizza: skriv for eksempel D11/14 og bruk knappene 1 og 2 for å redigere hver halvdel."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Tilbehør legges automatisk i handlekurven når antall skrives inn."/>
-                    <TextBlock Style="{StaticResource InfoTextStyle}"
-                               Text="• Trykk PRINT når bestillingen er ferdig kontrollert."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Standardingredienser markeres med x."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Skriv - eller -- for å fjerne en standardingrediens."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Skriv + eller ++ for å legge til ekstra topping."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• X-Ost og X-Kjøtt bruker faste priser fra systemet. Skriv bare antall i boksen."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Delt pizza: skriv for eksempel D11/14 og bruk knappene 1 og 2 for å redigere hver halvdel."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Tilbehør legges automatisk i handlekurven når antall skrives inn."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• PageDown legger til pizza, og PageUp går til handlekurven for å velge pizza som skal redigeres."/>
+                    <TextBlock Style="{StaticResource InfoTextStyle}" Text="• Trykk PRINT når bestillingen er ferdig kontrollert."/>
 
                     <Button Content="Lukk"
                             Command="{Binding ToggleInfoPopupCommand}"

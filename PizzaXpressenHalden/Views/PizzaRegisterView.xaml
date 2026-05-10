@@ -10,7 +10,6 @@
                 Background="White">
 
             <TabControl Background="White">
-                <!-- PIZZAER -->
                 <TabItem Header="Pizzaer">
                     <Grid Margin="12">
                         <Grid.ColumnDefinitions>
@@ -65,7 +64,7 @@
                                          Background="White">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="4,2">
+                                            <TextBlock Margin="4,2" Foreground="Black">
                                                 <Run Text="{Binding Nummer}"/>
                                                 <Run Text=" - "/>
                                                 <Run Text="{Binding Navn}"/>
@@ -87,6 +86,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
@@ -111,70 +111,30 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="Nummer"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,8"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1"
-                                             Text="{Binding SelectedPizza.Nummer, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"
-                                             Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Nummer" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SelectedPizza.Nummer, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="Navn"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,8"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1"
-                                             Text="{Binding SelectedPizza.Navn, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"
-                                             Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Navn" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SelectedPizza.Navn, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0"
-                                               Text="Beskrivelse"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,8"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Beskrivelse" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Top" Margin="0,0,8,8"/>
                                     <TextBox Grid.Row="2" Grid.Column="1"
                                              Text="{Binding SelectedPizza.Beskrivelse, UpdateSourceTrigger=PropertyChanged}"
                                              FontSize="14"
+                                             Height="60"
+                                             TextWrapping="Wrap"
+                                             AcceptsReturn="True"
+                                             VerticalScrollBarVisibility="Auto"
                                              Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0"
-                                               Text="Pris M"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,8"/>
-                                    <TextBox Grid.Row="3" Grid.Column="1"
-                                             Text="{Binding SelectedPizza.PrisMedium, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"
-                                             Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Pris M" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding SelectedPizza.PrisMedium, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="4" Grid.Column="0"
-                                               Text="Pris L"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,8"/>
-                                    <TextBox Grid.Row="4" Grid.Column="1"
-                                             Text="{Binding SelectedPizza.PrisLarge, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"
-                                             Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Pris S" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding SelectedPizza.PrisLarge, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="5" Grid.Column="0"
-                                               Text="Pris G"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,0"/>
-                                    <TextBox Grid.Row="5" Grid.Column="1"
-                                             Text="{Binding SelectedPizza.PrisGlutenfri, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Pris G" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding SelectedPizza.PrisGlutenfri, UpdateSourceTrigger=PropertyChanged}" FontSize="14"/>
                                 </Grid>
 
                                 <CheckBox Grid.Row="2"
@@ -182,10 +142,50 @@
                                           IsChecked="{Binding SelectedPizza.IsActive}"
                                           FontSize="13"
                                           Foreground="#2b7a2b"
-                                          Margin="0,0,0,14"/>
+                                          Margin="0,0,0,10"/>
 
-                                <StackPanel Grid.Row="3"
-                                            Orientation="Horizontal">
+                                <Border Grid.Row="3"
+                                        BorderBrush="#d9d9d9"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="8"
+                                        Background="White"
+                                        Margin="0,0,0,12">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0"
+                                                   Text="STANDARDTOPPINGER FOR VALGT PIZZA"
+                                                   FontSize="15"
+                                                   FontWeight="Bold"
+                                                   Foreground="#2b7a2b"
+                                                   Margin="0,0,0,8"/>
+
+                                        <ScrollViewer Grid.Row="1"
+                                                      VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding PizzaToppingChoices}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <UniformGrid Columns="3"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <CheckBox Content="{Binding Navn}"
+                                                                  IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                                                  Margin="4,3"
+                                                                  FontSize="13"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </Grid>
+                                </Border>
+
+                                <StackPanel Grid.Row="4" Orientation="Horizontal">
                                     <Button Content="Lagre"
                                             Command="{Binding SaveCommand}"
                                             Width="140"
@@ -204,7 +204,6 @@
                     </Grid>
                 </TabItem>
 
-                <!-- VARER OG PRISER -->
                 <TabItem Header="Varer og priser">
                     <Grid Margin="12">
                         <Grid.ColumnDefinitions>
@@ -259,7 +258,14 @@
                                          Background="White">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="4,2" Text="{Binding DisplayText}"/>
+                                            <TextBlock Margin="4,2" Foreground="Black">
+                                                <Run Text="{Binding Category}"/>
+                                                <Run Text=" - "/>
+                                                <Run Text="{Binding Navn}"/>
+                                                <Run Text=" ("/>
+                                                <Run Text="{Binding Pris}"/>
+                                                <Run Text=" kr)"/>
+                                            </TextBlock>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
@@ -298,40 +304,14 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="Kategori"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,8"/>
-                                    <ComboBox Grid.Row="0"
-                                              Grid.Column="1"
-                                              Margin="0,0,0,8"
-                                              ItemsSource="{Binding CatalogCategories}"
-                                              SelectedItem="{Binding SelectedCatalogItem.Category}"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Kategori" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                                    <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" ItemsSource="{Binding CatalogCategories}" SelectedItem="{Binding SelectedCatalogItem.Category}"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="Navn"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,8"/>
-                                    <TextBox Grid.Row="1"
-                                             Grid.Column="1"
-                                             Margin="0,0,0,8"
-                                             Text="{Binding SelectedCatalogItem.Navn, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Navn" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Text="{Binding SelectedCatalogItem.Navn, UpdateSourceTrigger=PropertyChanged}" FontSize="14"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0"
-                                               Text="Pris"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,0"/>
-                                    <TextBox Grid.Row="2"
-                                             Grid.Column="1"
-                                             Text="{Binding SelectedCatalogItem.Pris, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Pris" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SelectedCatalogItem.Pris, UpdateSourceTrigger=PropertyChanged}" FontSize="14"/>
                                 </Grid>
 
                                 <CheckBox Grid.Row="2"
@@ -341,8 +321,7 @@
                                           Foreground="#2b7a2b"
                                           Margin="0,0,0,14"/>
 
-                                <StackPanel Grid.Row="3"
-                                            Orientation="Horizontal">
+                                <StackPanel Grid.Row="3" Orientation="Horizontal">
                                     <Button Content="Lagre"
                                             Command="{Binding SaveCatalogCommand}"
                                             Width="140"
@@ -361,7 +340,6 @@
                     </Grid>
                 </TabItem>
 
-                <!-- TOPPINGS -->
                 <TabItem Header="Toppings">
                     <Grid Margin="12">
                         <Grid.ColumnDefinitions>
@@ -416,8 +394,7 @@
                                          Background="White">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Margin="4,2"
-                                                       Text="{Binding Navn}"/>
+                                            <TextBlock Margin="4,2" Text="{Binding Navn}" Foreground="Black"/>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
@@ -454,44 +431,16 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0"
-                                               Text="Navn"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,8"/>
-                                    <TextBox Grid.Row="0"
-                                             Grid.Column="1"
-                                             Text="{Binding SelectedTopping.Navn, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"
-                                             Margin="0,0,0,8"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Navn" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,8"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SelectedTopping.Navn, UpdateSourceTrigger=PropertyChanged}" FontSize="14" Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0"
-                                               Text="Rekkefølge"
-                                               Foreground="#2b7a2b"
-                                               FontSize="13"
-                                               VerticalAlignment="Center"
-                                               Margin="0,0,8,0"/>
-                                    <TextBox Grid.Row="1"
-                                             Grid.Column="1"
-                                             Text="{Binding SelectedTopping.Sortering, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="14"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Rekkefølge" Foreground="#2b7a2b" FontSize="13" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SelectedTopping.Sortering, UpdateSourceTrigger=PropertyChanged}" FontSize="14"/>
                                 </Grid>
 
-                                <StackPanel Grid.Row="2"
-                                            Orientation="Horizontal">
-                                    <Button Content="Lagre"
-                                            Command="{Binding SaveToppingCommand}"
-                                            Width="140"
-                                            Height="34"
-                                            Margin="0,0,10,0"
-                                            FontWeight="SemiBold"/>
-
-                                    <Button Content="Slett"
-                                            Command="{Binding DeleteToppingCommand}"
-                                            Width="140"
-                                            Height="34"
-                                            FontWeight="SemiBold"/>
+                                <StackPanel Grid.Row="2" Orientation="Horizontal">
+                                    <Button Content="Lagre" Command="{Binding SaveToppingCommand}" Width="140" Height="34" Margin="0,0,10,0" FontWeight="SemiBold"/>
+                                    <Button Content="Slett" Command="{Binding DeleteToppingCommand}" Width="140" Height="34" FontWeight="SemiBold"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
