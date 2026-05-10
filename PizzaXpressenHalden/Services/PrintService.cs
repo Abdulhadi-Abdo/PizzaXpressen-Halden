@@ -1,18 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using PizzaXpressenHalden.Models;
+using QRCoder;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Printing;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using QRCoder;
-using System.IO;
 
 namespace PizzaXpressenHalden;
 
@@ -33,10 +35,10 @@ public class PrintService
             .Include(o => o.Items)
             .FirstOrDefault(o => o.Id == order.Id) ?? order;
 
-        PrintDocument(BuildCombinedDocument(full), "PizzaXpressen Halden");
+        PrintDocument(BuildFixedDocument(full), "PizzaXpressen Halden");
     }
 
-    private static void PrintDocument(FlowDocument doc, string jobName)
+    private static void PrintDocument(FixedDocument doc, string jobName)
     {
         var queue = LocalPrintServer.GetDefaultPrintQueue();
 
@@ -49,62 +51,308 @@ public class PrintService
         try
         {
             var writer = PrintQueue.CreateXpsDocumentWriter(queue);
-            writer.Write(((IDocumentPaginatorSource)doc).DocumentPaginator, ticket);
+            writer.Write(doc, ticket);
         }
         catch
         {
-            var dlg = new PrintDialog();
-            dlg.PrintQueue = queue;
-            dlg.PrintTicket = ticket;
+            var dlg = new PrintDialog
+            {
+                PrintQueue = queue,
+                PrintTicket = ticket
+            };
 
             if (dlg.ShowDialog() == true)
-                dlg.PrintDocument(((IDocumentPaginatorSource)doc).DocumentPaginator, jobName);
+                dlg.PrintDocument(doc.DocumentPaginator, jobName);
         }
     }
 
-    private FlowDocument BuildCombinedDocument(Order order)
+    private FixedDocument BuildFixedDocument(Order order)
     {
-        var a4Width = MmToPx(210);
-        var a4Height = MmToPx(297);
+        double pageWidth = MmToPx(210);
+        double pageHeight = MmToPx(297);
 
-        var receiptWidth = MmToPx(105);
-        var horizontalPadding = (a4Width - receiptWidth) / 2.0;
-        var topPadding = 10.0;
-        var bottomPadding = 10.0;
+        double contentWidth = MmToPx(94);
 
-        var d = new FlowDocument
+        double left = (pageWidth - contentWidth) / 2.0;
+
+        double kitchenTop = 51;
+        double receiptTop = 445;
+        double driverTop = 760;
+
+        double maxKitchenHeight = receiptTop - kitchenTop - 10;
+        double maxReceiptHeight = driverTop - receiptTop - 10;
+        double maxDriverHeight = pageHeight - driverTop - 10;
+
+        double kitchenHeight = Math.Min(CalculateKitchenBlockHeight(order), maxKitchenHeight);
+        double receiptHeight = Math.Min(CalculateReceiptBlockHeight(order), maxReceiptHeight);
+        double driverHeight = Math.Min(CalculateDriverBlockHeight(order), maxDriverHeight);
+
+        var fixedDoc = new FixedDocument
         {
-            PageWidth = a4Width,
-            PageHeight = a4Height,
-            PagePadding = new Thickness(horizontalPadding, topPadding, horizontalPadding, bottomPadding),
-            ColumnWidth = receiptWidth,
-            FontFamily = new FontFamily("Consolas"),
-            FontSize = 11
+            DocumentPaginator =
+            {
+                PageSize = new Size(pageWidth, pageHeight)
+            }
         };
 
-        var kitchen = BuildKitchenBlock(order);
-        var receipt = BuildReceiptBlock(order);
-        var driver = order.DeliveryType == DeliveryType.Delivery ? BuildDriverBlock(order) : null;
+        var pageContent = new PageContent();
+        var fixedPage = new FixedPage
+        {
+            Width = pageWidth,
+            Height = pageHeight,
+            Background = Brushes.White
+        };
 
-        if (kitchen is Section ks) ks.Margin = new Thickness(0, 0, 0, 90);
-        if (kitchen is Paragraph kp) kp.Margin = new Thickness(0, 0, 0, 90);
+        var kitchen = WrapFixedRegionUnscaled(BuildKitchenBlock(order), contentWidth, kitchenHeight);
+        FixedPage.SetLeft(kitchen, left);
+        FixedPage.SetTop(kitchen, kitchenTop);
+        fixedPage.Children.Add(kitchen);
 
-        if (receipt is Section rs) rs.Margin = new Thickness(0, 0, 0, 80);
-        if (receipt is Paragraph rp) rp.Margin = new Thickness(0, 0, 0, 80);
+        var receipt = WrapFixedRegionUnscaled(BuildReceiptBlock(order), contentWidth, receiptHeight);
+        FixedPage.SetLeft(receipt, left);
+        FixedPage.SetTop(receipt, receiptTop);
+        fixedPage.Children.Add(receipt);
 
-        if (driver is Section ds) ds.Margin = new Thickness(0, 0, 0, 0);
-        if (driver is Paragraph dp) dp.Margin = new Thickness(0, 0, 0, 0);
+        if (order.DeliveryType == DeliveryType.Delivery)
+        {
+            var driver = WrapFixedRegionUnscaled(BuildDriverBlock(order), contentWidth, driverHeight);
+            FixedPage.SetLeft(driver, left);
+            FixedPage.SetTop(driver, driverTop);
+            fixedPage.Children.Add(driver);
+        }
 
-        d.Blocks.Add(kitchen);
-        d.Blocks.Add(receipt);
+        ((IAddChild)pageContent).AddChild(fixedPage);
+        fixedDoc.Pages.Add(pageContent);
 
-        if (driver != null)
-            d.Blocks.Add(driver);
-
-        return d;
+        return fixedDoc;
     }
 
-    private Block BuildKitchenBlock(Order order)
+    private double CalculateKitchenBlockHeight(Order order)
+    {
+        var pizzaColumns = BuildKitchenPizzaColumns(order);
+
+        var toppings = pizzaColumns
+            .SelectMany(x => x.Toppings.Keys)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+        int totalRows = toppings.Count + 2;
+        double scale = GetKitchenTableScale(totalRows);
+
+        double baseHeaderHeight = 38;
+        double total = 0;
+
+        total += baseHeaderHeight;
+        total += 4;
+        total += 16 * scale;
+        total += 16 * scale;
+
+        foreach (var topping in toppings)
+            total += EstimateKitchenLabelRowHeight(DisplayItemName(topping)) * scale;
+
+        total += 4;
+
+        return Math.Max(185, total);
+    }
+
+    private double CalculateReceiptBlockHeight(Order order)
+    {
+        int pizzaRows = order.Items.Count(IsPizzaItem) + 1;
+        int extraRows = order.Items.Count(x => !IsPizzaItem(x)) + 3;
+
+        double total = 0;
+        total += 72;
+        total += 22;
+        total += 8;
+        total += Math.Max(pizzaRows, extraRows) * 16;
+        total += 10;
+
+        return Math.Max(245, total);
+    }
+
+    private double CalculateDriverBlockHeight(Order order)
+    {
+        var userNotes = GetUserNotes(order);
+
+        int extraLines = order.Items.Count(x =>
+            !IsPizzaItem(x) &&
+            !string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase));
+
+        int columns = extraLines > 14 ? 3 : 2;
+        int visibleRows = extraLines == 0 ? 0 : (int)Math.Ceiling(extraLines / (double)columns);
+
+        double total = 0;
+        total += 78;
+        total += 30;
+        total += Math.Max(0, visibleRows) * 14;
+        total += 40;
+
+        if (!string.IsNullOrWhiteSpace(userNotes))
+            total += 18 + (EstimateTextLineCount(userNotes, 26) * 13);
+
+        total += 90;
+        total += 10;
+
+        return Math.Max(280, total);
+    }
+
+    private static double EstimateKitchenLabelRowHeight(string text)
+    {
+        int lineCount = EstimateTextLineCount(text, 18);
+        return Math.Max(18, (lineCount * 12) + 3);
+    }
+
+    private static int EstimateTextLineCount(string text, int charsPerLine)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 1;
+
+        var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+
+        int total = 0;
+        foreach (var line in lines)
+        {
+            var current = string.IsNullOrEmpty(line) ? " " : line;
+            total += Math.Max(1, (int)Math.Ceiling(current.Length / (double)charsPerLine));
+        }
+
+        return Math.Max(1, total);
+    }
+
+    private static Border WrapFixedRegionUnscaled(UIElement content, double width, double height)
+    {
+        return new Border
+        {
+            Width = width,
+            Height = height,
+            Background = Brushes.White,
+            Padding = new Thickness(4),
+            Child = new Border
+            {
+                Width = width,
+                Background = Brushes.White,
+                Child = content
+            }
+        };
+    }
+
+    private static bool IsPizzaItem(OrderItem it)
+    {
+        return it.PizzaId != null ||
+               (it.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int CountPizzaQuantity(Order order)
+    {
+        return order.Items.Where(IsPizzaItem).Sum(x => x.Quantity);
+    }
+
+    private static string GetReceiptPizzaLabel(OrderItem item)
+    {
+        ParsePizzaItemName(item.ItemName, out var pizzaNr, out _, out _);
+
+        if ((item.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
+            return $"D{pizzaNr}";
+
+        if (!string.IsNullOrWhiteSpace(pizzaNr))
+            return $"#{pizzaNr}";
+
+        return DisplayItemName(item.ItemName);
+    }
+
+    private static string NormalizeSize(string? size)
+    {
+        var s = (size ?? "").Trim().ToUpperInvariant();
+
+        if (string.IsNullOrWhiteSpace(s))
+            return "S";
+
+        if (s == "L")
+            return "S";
+
+        return s;
+    }
+
+    private static string FormatKitchenNrAndQuantity(string numberText, int quantity)
+    {
+        numberText = (numberText ?? "").Trim();
+
+        if (quantity <= 1)
+            return numberText;
+
+        return $"{numberText}x{quantity}";
+    }
+
+    private static double GetKitchenTableScale(int totalRows)
+    {
+        // totalRows = topping-rader + 2 header-rader.
+        // Tabellen krympes bare nok til å holde seg i kjøkkenområdet.
+        if (totalRows <= 14)
+            return 1.0;
+
+        if (totalRows == 15)
+            return 0.96;
+
+        if (totalRows == 16)
+            return 0.92;
+
+        if (totalRows == 17)
+            return 0.88;
+
+        if (totalRows == 18)
+            return 0.84;
+
+        if (totalRows == 19)
+            return 0.80;
+
+        if (totalRows == 20)
+            return 0.76;
+
+        if (totalRows == 21)
+            return 0.72;
+
+        if (totalRows == 22)
+            return 0.68;
+
+        if (totalRows == 23)
+            return 0.64;
+
+        if (totalRows == 24)
+            return 0.61;
+
+        return 0.58;
+    }
+
+    private static double GetKitchenColumnScale(int pizzaCount)
+    {
+        if (pizzaCount <= 3)
+            return 1.0;
+
+        if (pizzaCount == 4)
+            return 0.90;
+
+        if (pizzaCount == 5)
+            return 0.82;
+
+        if (pizzaCount == 6)
+            return 0.76;
+
+        if (pizzaCount == 7)
+            return 0.70;
+
+        return 0.64;
+    }
+
+    private sealed class KitchenPizzaColumn
+    {
+        public string NumberText { get; set; } = "";
+        public string SizeText { get; set; } = "";
+        public int Quantity { get; set; } = 1;
+        public Dictionary<string, string> Toppings { get; set; } = new(StringComparer.CurrentCultureIgnoreCase);
+    }
+
+    private UIElement BuildKitchenBlock(Order order)
     {
         var scheduled = GetScheduledLocal(order);
         var createdLocal = order.CreatedAtUtc.ToLocalTime();
@@ -113,133 +361,89 @@ public class PrintService
         var phone = (order.Customer?.Phone ?? "-").Trim();
         var deliveryFlag = order.DeliveryType == DeliveryType.Delivery ? "B" : "H";
 
-        var section = new Section
+        var root = new StackPanel
         {
             Margin = new Thickness(0)
         };
 
-        var headerLines = new List<string>
-        {
-            "KJØKKENLAPP",
-            $"{customerName} / {phone}",
+        root.Children.Add(Text($"{customerName} / {phone}", false, 11));
+        root.Children.Add(Text(
             $"{deliveryFlag}: {order.Id}, Lapp: 1, Inn: {createdLocal:dd.MM HH:mm}, Leveres: {(scheduled != null ? scheduled.Value.ToString("dd.MM HH:mm") : "-")}",
-            ""
-        };
+            false, 10));
 
-        section.Blocks.Add(MonoBlock(headerLines, true));
+        root.Children.Add(Spacer(4));
 
-        var matrix = BuildKitchenMatrixTable(order);
-        if (matrix != null)
-        {
-            section.Blocks.Add(matrix);
-            section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 3, 0, 3) });
-        }
+        var pizzaColumns = BuildKitchenPizzaColumns(order);
+        if (pizzaColumns.Count > 0)
+            root.Children.Add(BuildKitchenCombinedTable(pizzaColumns));
 
-        bool IsPizzaLine(OrderItem it)
-            => it.PizzaId != null || (it.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase);
-
-        foreach (var it in order.Items.Where(x => !IsPizzaLine(x) && x.PizzaId == null && x.ItemName != "Kj.tillegg"))
-        {
-            section.Blocks.Add(MonoBlock(new List<string> { $"{it.Quantity} {DisplayItemName(it.ItemName)}" }, false));
-        }
-
-        if (order.Items.Any(x => string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase)))
-        {
-            var fee = order.Items.First(x => string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase));
-            section.Blocks.Add(MonoBlock(new List<string> { $"{fee.Quantity} Kjøretillegg" }, false));
-        }
-
-        return section;
+        return root;
     }
 
-    private Block? BuildKitchenMatrixTable(Order order)
+    private List<KitchenPizzaColumn> BuildKitchenPizzaColumns(Order order)
     {
-        var pizzaItems = order.Items
-            .Where(it => it.PizzaId != null || (it.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        var raw = new List<KitchenPizzaColumn>();
 
-        if (pizzaItems.Count == 0)
-            return null;
-
-        var columns = pizzaItems.Select(BuildKitchenColumn).ToList();
-
-        var toppingOrder = _db.Toppings
-            .AsNoTracking()
-            .OrderBy(x => x.Sortering)
-            .Select(x => x.Navn)
-            .ToList();
-
-        var allNames = new List<string>(toppingOrder);
-
-        foreach (var extraName in columns
-                     .SelectMany(c => c.Marks.Keys)
-                     .Where(x => !allNames.Contains(x, StringComparer.CurrentCultureIgnoreCase))
-                     .Distinct(StringComparer.CurrentCultureIgnoreCase))
+        foreach (var item in order.Items.Where(IsPizzaItem))
         {
-            allNames.Add(extraName);
-        }
+            ParsePizzaItemName(item.ItemName, out var pizzaNr, out var size, out _);
+            var quantity = Math.Max(1, item.Quantity);
 
-        var usedToppings = allNames
-            .Where(name => columns.Any(c => c.Marks.ContainsKey(name)))
-            .ToList();
+            size = NormalizeSize(size);
 
-        var table = new Table
-        {
-            CellSpacing = 0,
-            Margin = new Thickness(0)
-        };
+            var toppingSet = BuildKitchenToppingSet(item);
 
-        table.Columns.Add(new TableColumn { Width = new GridLength(110) });
-
-        foreach (var _ in columns)
-            table.Columns.Add(new TableColumn { Width = new GridLength(24) });
-
-        var group = new TableRowGroup();
-        table.RowGroups.Add(group);
-
-        var nrRow = new TableRow();
-        nrRow.Cells.Add(CreateCell("Nr", true, true));
-        foreach (var col in columns)
-            nrRow.Cells.Add(CreateCell(col.Number, true, true));
-        group.Rows.Add(nrRow);
-
-        var strRow = new TableRow();
-        strRow.Cells.Add(CreateCell("Str", false, true));
-        foreach (var col in columns)
-            strRow.Cells.Add(CreateCell(col.Size, false, true));
-        group.Rows.Add(strRow);
-
-        foreach (var topping in usedToppings)
-        {
-            var row = new TableRow();
-            row.Cells.Add(CreateCell(DisplayItemName(topping), false, true));
-
-            foreach (var col in columns)
+            for (int i = 0; i < quantity; i++)
             {
-                var mark = col.Marks.TryGetValue(topping, out var value) ? value : "";
-                row.Cells.Add(CreateCell(mark, false, true));
+                raw.Add(new KitchenPizzaColumn
+                {
+                    NumberText = string.IsNullOrWhiteSpace(pizzaNr) ? DisplayItemName(item.ItemName) : pizzaNr,
+                    SizeText = size,
+                    Quantity = 1,
+                    Toppings = new Dictionary<string, string>(toppingSet, StringComparer.CurrentCultureIgnoreCase)
+                });
             }
-
-            group.Rows.Add(row);
         }
 
-        return table;
+        var grouped = raw
+            .GroupBy(x => new
+            {
+                x.NumberText,
+                x.SizeText,
+                ToppingsKey = string.Join("|", x.Toppings
+                    .OrderBy(t => t.Key, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(t => $"{t.Key}={t.Value}"))
+            })
+            .Select(g => new KitchenPizzaColumn
+            {
+                NumberText = g.Key.NumberText,
+                SizeText = g.Key.SizeText,
+                Quantity = g.Count(),
+                Toppings = new Dictionary<string, string>(g.First().Toppings, StringComparer.CurrentCultureIgnoreCase)
+            })
+            .OrderBy(x =>
+            {
+                if (int.TryParse(x.NumberText, out var nr))
+                    return nr;
+                return int.MaxValue;
+            })
+            .ThenBy(x => x.SizeText)
+            .ToList();
+
+        return grouped;
     }
 
-    private KitchenMatrixColumn BuildKitchenColumn(OrderItem item)
+    private Dictionary<string, string> BuildKitchenToppingSet(OrderItem item)
     {
-        ParsePizzaItemName(item.ItemName, out var pizzaNr, out var size, out _);
+        var result = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
 
         if ((item.ItemName ?? "").StartsWith("DELT ", StringComparison.OrdinalIgnoreCase))
-            return BuildKitchenSplitColumn(item, pizzaNr, size);
+            return BuildSplitPizzaKitchenToppingSet(item);
 
-        ParseStandardNote(item.Note, out var removes, out var adds);
-
-        var marks = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
-
+        var baseToppings = new List<string>();
         if (item.PizzaId.HasValue)
         {
-            var baseToppings = _db.Pizzas
+            baseToppings = _db.Pizzas
                 .AsNoTracking()
                 .Where(p => p.Id == item.PizzaId.Value)
                 .Include(p => p.PizzaToppings)
@@ -248,38 +452,26 @@ public class PrintService
                 .OrderBy(pt => pt.Topping.Sortering)
                 .Select(pt => pt.Topping.Navn)
                 .ToList();
-
-            foreach (var topping in baseToppings)
-                marks[topping] = removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
         }
 
-        foreach (var topping in adds)
-            marks[topping] = "x";
+        var custom = ParseKitchenCustomNote(item.Note);
 
-        return new KitchenMatrixColumn
-        {
-            Number = string.IsNullOrWhiteSpace(pizzaNr) ? "?" : pizzaNr,
-            Size = string.IsNullOrWhiteSpace(size) ? "" : size,
-            Marks = marks
-        };
+        foreach (var topping in baseToppings)
+            result[topping] = "X";
+
+        foreach (var entry in custom)
+            result[entry.Key] = entry.Value;
+
+        return result;
     }
 
-    private KitchenMatrixColumn BuildKitchenSplitColumn(OrderItem item, string pizzaNr, string size)
+    private Dictionary<string, string> BuildSplitPizzaKitchenToppingSet(OrderItem item)
     {
-        var marks = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+        var result = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
 
         var name = item.ItemName ?? "";
         var m = Regex.Match(name, @"DELT\s+(\d+)\s*/\s*(\d+)", RegexOptions.IgnoreCase);
-
-        if (!m.Success)
-        {
-            return new KitchenMatrixColumn
-            {
-                Number = string.IsNullOrWhiteSpace(pizzaNr) ? "D" : pizzaNr,
-                Size = string.IsNullOrWhiteSpace(size) ? "" : size,
-                Marks = marks
-            };
-        }
+        if (!m.Success) return result;
 
         var nr1 = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
         var nr2 = int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
@@ -288,161 +480,570 @@ public class PrintService
 
         var pizza1 = _db.Pizzas
             .AsNoTracking()
-            .Include(p => p.PizzaToppings)
-            .ThenInclude(pt => pt.Topping)
+            .Include(p => p.PizzaToppings).ThenInclude(pt => pt.Topping)
             .FirstOrDefault(p => p.Nummer == nr1);
 
         var pizza2 = _db.Pizzas
             .AsNoTracking()
-            .Include(p => p.PizzaToppings)
-            .ThenInclude(pt => pt.Topping)
+            .Include(p => p.PizzaToppings).ThenInclude(pt => pt.Topping)
             .FirstOrDefault(p => p.Nummer == nr2);
 
         if (pizza1 != null)
         {
-            foreach (var topping in pizza1.PizzaToppings.Select(x => x.Topping.Navn))
-                marks[topping] = half1Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
+            foreach (var topping in pizza1.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
+                result[topping] = "X";
+
+            foreach (var topping in half1Removes)
+                result[topping] = "--";
 
             foreach (var topping in half1Adds)
-                marks[topping] = "x";
+                result[topping] = "XX";
         }
 
         if (pizza2 != null)
         {
-            foreach (var topping in pizza2.PizzaToppings.Select(x => x.Topping.Navn))
-            {
-                if (!marks.ContainsKey(topping))
-                    marks[topping] = half2Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? "-" : "x";
-                else if (marks[topping] != "x")
-                    marks[topping] = half2Removes.Contains(topping, StringComparer.CurrentCultureIgnoreCase) ? marks[topping] : "x";
-            }
+            foreach (var topping in pizza2.PizzaToppings.OrderBy(x => x.Topping.Sortering).Select(x => x.Topping.Navn))
+                if (!result.ContainsKey(topping))
+                    result[topping] = "X";
+
+            foreach (var topping in half2Removes)
+                result[topping] = "--";
 
             foreach (var topping in half2Adds)
-                marks[topping] = "x";
+                result[topping] = "XX";
         }
 
-        return new KitchenMatrixColumn
-        {
-            Number = $"{nr1}/{nr2}",
-            Size = string.IsNullOrWhiteSpace(size) ? "" : size,
-            Marks = marks
-        };
+        return result;
     }
 
-    private static Block BuildReceiptBlock(Order order)
+    private UIElement BuildKitchenCombinedTable(List<KitchenPizzaColumn> pizzaColumns)
     {
-        var section = new Section
+        var allToppings = pizzaColumns
+            .SelectMany(x => x.Toppings.Keys)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+        int totalRows = allToppings.Count + 2;
+        double scale = Math.Min(GetKitchenTableScale(totalRows), GetKitchenColumnScale(pizzaColumns.Count));
+
+        var grid = new Grid
         {
-            Margin = new Thickness(0)
+            Margin = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            LayoutTransform = new ScaleTransform(scale, scale)
         };
 
-        var logo = TryLogoBlock();
-        if (logo != null)
-            section.Blocks.Add(logo);
+        int pizzaCount = Math.Max(1, pizzaColumns.Count);
 
-        section.Blocks.Add(MonoBlock(new List<string>
+        double totalTableWidth = pizzaCount <= 2 ? 370 : 410;
+        double firstColumnWidth = pizzaCount <= 2 ? 170 : 145;
+        double pizzaColumnWidth = (totalTableWidth - firstColumnWidth) / pizzaCount;
+
+        grid.ColumnDefinitions.Add(new ColumnDefinition
         {
-            "PizzaXpressen - Halden",
-            "Kongens brygge 2, 1767 Halden",
-            "halden@pizzaxpressen.no"
-        }, true));
+            Width = new GridLength(firstColumnWidth)
+        });
 
-        section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 2, 0, 2) });
+        foreach (var _ in pizzaColumns)
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = new GridLength(pizzaColumnWidth)
+            });
+        }
+
+        int rowIndex = 0;
+
+        void AddRow(IReadOnlyList<string> cells, bool isHeader)
+        {
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            for (int i = 0; i < cells.Count; i++)
+            {
+                bool isFirstColumn = i == 0;
+                bool compactTable = scale < 1.0;
+
+                var tb = new TextBlock
+                {
+                    Text = cells[i],
+                    FontFamily = new FontFamily("Arial Black"),
+                    FontSize = compactTable
+                        ? (isHeader ? 11.6 : 12.0)
+                        : (isHeader ? 9.8 : 10.2),
+                    FontWeight = compactTable
+                        ? FontWeights.Black
+                        : FontWeights.Black,
+                    Foreground = Brushes.Black,
+                    TextAlignment = isFirstColumn && !isHeader ? TextAlignment.Left : TextAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextWrapping = isFirstColumn && !isHeader ? TextWrapping.Wrap : TextWrapping.NoWrap,
+                    Padding = compactTable
+                        ? new Thickness(1.4, 0.4, 1.4, 0.4)
+                        : new Thickness(1.5, 0.8, 1.5, 0.8)
+                };
+
+                var border = new Border
+                {
+                    BorderBrush = compactTable ? Brushes.Black : Brushes.Black,
+                    BorderThickness = compactTable ? new Thickness(0.40) : new Thickness(0.70),
+                    Child = tb
+                };
+
+                Grid.SetRow(border, rowIndex);
+                Grid.SetColumn(border, i);
+                grid.Children.Add(border);
+            }
+
+            rowIndex++;
+        }
+
+        AddRow(
+            new[] { "Nr x Ant" }
+            .Concat(pizzaColumns.Select(x => FormatKitchenNrAndQuantity(x.NumberText, x.Quantity)))
+            .ToArray(),
+            true);
+
+        AddRow(
+            new[] { "Str" }
+            .Concat(pizzaColumns.Select(x => NormalizeSize(x.SizeText)))
+            .ToArray(),
+            true);
+
+        foreach (var topping in allToppings)
+        {
+            AddRow(
+                new[] { DisplayItemName(topping) }
+                .Concat(pizzaColumns.Select(x => x.Toppings.TryGetValue(topping, out var value) ? value : ""))
+                .ToArray(),
+                false);
+        }
+
+        return grid;
+    }
+
+    private UIElement BuildReceiptBlock(Order order)
+    {
+        var root = new StackPanel();
+
+        var pizzaItems = order.Items.Where(IsPizzaItem).ToList();
+        var extraItems = order.Items.Where(x => !IsPizzaItem(x)).ToList();
+
+        int pizzaRowCount = pizzaItems.Count + 1;
+        int extraRowCount = extraItems.Count + 3;
+        int maxRows = Math.Max(pizzaRowCount, extraRowCount);
+
+        double receiptHeaderFont =
+            maxRows <= 8 ? 12 :
+            maxRows <= 12 ? 11 : 10.5;
+
+        double receiptBodyFont =
+            maxRows <= 8 ? 10 :
+            maxRows <= 12 ? 9.2 : 8.6;
+
+        var logo = TryLogoImage();
+        if (logo != null)
+            root.Children.Add(logo);
 
         var scheduled = GetScheduledLocal(order);
-        var type = order.DeliveryType == DeliveryType.Delivery ? "Bringes" : "Hentes";
-        var typeLine = scheduled != null ? $"{type}: {scheduled:dd.MM.yyyy} kl. {scheduled:HH:mm}" : $"{type}: -";
-        section.Blocks.Add(MonoBlock(new List<string> { typeLine, "" }));
-
-        var userNotes = GetUserNotes(order);
-        if (!string.IsNullOrWhiteSpace(userNotes))
-            section.Blocks.Add(MonoBlock(new List<string> { "Merknader:", userNotes, "" }, true));
-
-        foreach (var it in order.Items)
-        {
-            var sum = (it.UnitPrice * it.Quantity).ToString("0.00", CultureInfo.InvariantCulture);
-            var left = $"{it.Quantity} {DisplayItemName(it.ItemName)}";
-            section.Blocks.Add(MonoLine(left, sum));
-        }
+        var customerName = (order.Customer?.Name ?? "-").Trim();
+        var phone = (order.Customer?.Phone ?? "-").Trim();
+        var address = (order.Customer?.AddressText ?? "-").Trim();
+        if (string.IsNullOrWhiteSpace(address)) address = "-";
 
         var total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
-        section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 2, 0, 2) });
-        section.Blocks.Add(MonoLine("Pris:", total.ToString("0.00", CultureInfo.InvariantCulture), true));
 
-        return section;
+        var headerGrid = new Grid();
+        headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var leftInfo = new StackPanel();
+        leftInfo.Children.Add(Text("PizzaXpressen - Halden", true, receiptHeaderFont));
+        leftInfo.Children.Add(Text("Kongens brygge 2, 1767 Halden", false, receiptBodyFont));
+        leftInfo.Children.Add(Text("halden@pizzaxpressen.no", false, receiptBodyFont));
+
+        var rightInfo = new StackPanel();
+        rightInfo.Children.Add(Text($"Kunde: {customerName} / {phone}", true, receiptHeaderFont));
+        rightInfo.Children.Add(Text(address, false, receiptBodyFont));
+        rightInfo.Children.Add(Text(
+            scheduled != null
+                ? $"Leveres: {scheduled:dd.MM.yyyy} kl. {scheduled:HH:mm}"
+                : "Leveres: -", false, receiptBodyFont));
+
+        Grid.SetColumn(leftInfo, 0);
+        Grid.SetColumn(rightInfo, 1);
+        headerGrid.Children.Add(leftInfo);
+        headerGrid.Children.Add(rightInfo);
+
+        root.Children.Add(headerGrid);
+        root.Children.Add(Spacer(6));
+
+        var best = Text($"Bestilling: {order.Id} - Lapp: 1", true, 12);
+        root.Children.Add(best);
+
+        root.Children.Add(Spacer(6));
+
+        var contentGrid = new Grid();
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(160) });
+        contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+
+        var pizzaTable = new Grid();
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(52) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
+        pizzaTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(42) });
+
+        int pRow = 0;
+        void AddPizzaRow(string a, string b, string c, string d)
+        {
+            pizzaTable.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            AddGridCell(pizzaTable, pRow, 0, a, 10);
+            AddGridCell(pizzaTable, pRow, 1, b, 10);
+            AddGridCell(pizzaTable, pRow, 2, c, 10);
+            AddGridCell(pizzaTable, pRow, 3, d, 10, TextAlignment.Right);
+            pRow++;
+        }
+
+        AddPizzaRow("Pizza", "Størrelse", "Ant", "Pris");
+
+        foreach (var item in pizzaItems)
+        {
+            ParsePizzaItemName(item.ItemName, out _, out var size, out _);
+            AddPizzaRow(
+                GetReceiptPizzaLabel(item),
+                NormalizeSize(size),
+                item.Quantity.ToString(),
+                (item.UnitPrice * item.Quantity).ToString("0.00", CultureInfo.InvariantCulture));
+        }
+
+        var rightSection = new StackPanel();
+
+        var extrasTable = new Grid();
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
+        extrasTable.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(38) });
+
+        int eRow = 0;
+        void AddExtraRow(string a, string b, string c, bool bold = false)
+        {
+            extrasTable.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+            var tb1 = new TextBlock
+            {
+                Text = a,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 9,
+                FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            var tb2 = new TextBlock
+            {
+                Text = b,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 9,
+                FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            var tb3 = new TextBlock
+            {
+                Text = c,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 9,
+                FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
+                TextAlignment = TextAlignment.Right,
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            Grid.SetRow(tb1, eRow);
+            Grid.SetColumn(tb1, 0);
+            extrasTable.Children.Add(tb1);
+
+            Grid.SetRow(tb2, eRow);
+            Grid.SetColumn(tb2, 1);
+            extrasTable.Children.Add(tb2);
+
+            Grid.SetRow(tb3, eRow);
+            Grid.SetColumn(tb3, 2);
+            extrasTable.Children.Add(tb3);
+
+            eRow++;
+        }
+
+        AddExtraRow("Tilbehør", "Ant", "Pris");
+
+        foreach (var item in extraItems)
+        {
+            AddExtraRow(
+                DisplayItemName(item.ItemName),
+                item.Quantity.ToString(),
+                (item.UnitPrice * item.Quantity).ToString("0.00", CultureInfo.InvariantCulture));
+        }
+
+        AddExtraRow("", "", "");
+        AddExtraRow("Total:", "", total.ToString("0.00", CultureInfo.InvariantCulture), true);
+
+        rightSection.Children.Add(extrasTable);
+
+        Grid.SetColumn(pizzaTable, 0);
+        Grid.SetColumn(rightSection, 1);
+        contentGrid.Children.Add(pizzaTable);
+        contentGrid.Children.Add(rightSection);
+
+        root.Children.Add(contentGrid);
+
+        return root;
     }
 
-    private static Block BuildDriverBlock(Order order)
+    private UIElement BuildDriverBlock(Order order)
     {
         var scheduled = GetScheduledLocal(order);
         var createdLocal = order.CreatedAtUtc.ToLocalTime();
+        var userNotes = GetUserNotes(order);
 
         var c = order.Customer;
         var customer = (c?.Name ?? "-").Trim();
         var phone = (c?.Phone ?? "-").Trim();
-
         var address = (c?.AddressText ?? "-").Trim();
         if (string.IsNullOrWhiteSpace(address)) address = "-";
 
-        var lines = new List<string>
-        {
-            "SJÅFØRLAPP",
-            $"Inn kl: {createdLocal:HH:mm}",
-            scheduled != null ? $"Bringes: {scheduled:HH:mm} {scheduled:dd.MM.yy}" : "Bringes: -",
-            "",
-            $"Kunde: {customer}",
-            $"Tlf:   {phone}",
-            $"Adr:   {address}",
-            ""
-        };
+        var total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
+        var pizzaCount = CountPizzaQuantity(order);
 
-        var userNotes = GetUserNotes(order);
+        var root = new StackPanel();
+
+        root.Children.Add(Text($"Faktura: {order.Id} - Lapp: 1", true, 14));
+        root.Children.Add(Text($"Kunde: {customer}", false, 11));
+        root.Children.Add(Text($"Tlf: {phone}", false, 11));
+        root.Children.Add(Text("Adresse:", false, 11));
+        root.Children.Add(Text(address, false, 11));
+        root.Children.Add(Spacer(6));
+
+        root.Children.Add(Text($"## {pizzaCount} Pizza{(pizzaCount == 1 ? "" : "er")} skal bringes", true, 17));
+        root.Children.Add(Spacer(7));
+
+        var driverExtras = BuildDriverExtrasColumns(order);
+        if (driverExtras != null)
+            root.Children.Add(driverExtras);
+
+        root.Children.Add(Spacer(10));
+
+        var footer = new Grid();
+        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });
+
+        var leftFooter = new StackPanel();
+        leftFooter.Children.Add(Text($"Dato/tid: {createdLocal:dd.MM.yyyy} kl. {createdLocal:HH:mm}", false, 10));
+        leftFooter.Children.Add(Text(scheduled != null ? $"Levering: {scheduled:HH:mm}" : "Levering: -", false, 10));
+
+        var rightFooter = Text($"Total: {total:0.00}", true, 14);
+        rightFooter.TextAlignment = TextAlignment.Right;
+
+        Grid.SetColumn(leftFooter, 0);
+        Grid.SetColumn(rightFooter, 1);
+        footer.Children.Add(leftFooter);
+        footer.Children.Add(rightFooter);
+
+        root.Children.Add(footer);
+
         if (!string.IsNullOrWhiteSpace(userNotes))
         {
-            lines.Add("MERKNADER:");
-            lines.AddRange(WrapMono(userNotes, 34).Select(x => "  " + x));
-            lines.Add("");
+            root.Children.Add(Spacer(8));
+            root.Children.Add(Text("Merknad:", true, 11));
+            root.Children.Add(Text(userNotes, false, 11));
         }
 
-        var section = new Section
+        var qr = BuildQrImage(address);
+        if (qr != null)
         {
+            root.Children.Add(Spacer(7));
+            root.Children.Add(Text("Skann for kart", false, 10));
+            root.Children.Add(qr);
+        }
+
+        return root;
+    }
+
+    private static UIElement? BuildDriverExtrasColumns(Order order)
+    {
+        var extras = order.Items
+            .Where(x =>
+                !IsPizzaItem(x) &&
+                !string.Equals(x.ItemName, "Kj.tillegg", StringComparison.OrdinalIgnoreCase))
+            .Select(x => $"{x.Quantity}x {DisplayItemName(x.ItemName)}")
+            .ToList();
+
+        if (extras.Count == 0)
+            return null;
+
+        int columns = extras.Count > 14 ? 3 : 2;
+
+        var grid = new UniformGrid
+        {
+            Columns = columns,
+            Width = 320,
+            HorizontalAlignment = HorizontalAlignment.Left,
             Margin = new Thickness(0)
         };
 
-        section.Blocks.Add(MonoBlock(lines, true));
-
-        foreach (var it in order.Items.Where(x => x.ItemName != "Kj.tillegg"))
-            section.Blocks.Add(MonoLine($"{it.Quantity} {DisplayItemName(it.ItemName)}", ""));
-
-        var total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
-        section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 2, 0, 2) });
-        section.Blocks.Add(MonoLine("Pris:", total.ToString("0.00", CultureInfo.InvariantCulture), true));
-
-        var qrBlock = BuildQrBlockForAddress(address);
-        if (qrBlock != null)
+        foreach (var extra in extras)
         {
-            section.Blocks.Add(new Paragraph(new Run("")) { Margin = new Thickness(0, 4, 0, 4) });
-            section.Blocks.Add(qrBlock);
+            var tb = Text(extra, false, 10);
+            tb.TextWrapping = TextWrapping.NoWrap;
+            tb.Margin = new Thickness(0, 0, 8, 0);
+
+            grid.Children.Add(tb);
         }
 
-        return section;
+        return grid;
     }
 
-    private static TableCell CreateCell(string text, bool bold, bool border)
+    private static Dictionary<string, string> ParseKitchenCustomNote(string? note)
     {
-        var p = new Paragraph(new Run(text ?? ""))
+        var result = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(note))
+            return result;
+
+        var parts = note.Split('|', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(x => x.Trim());
+
+        foreach (var part in parts)
         {
-            Margin = new Thickness(2, 1, 2, 1)
+            if (part.StartsWith("CUSTOM:", StringComparison.CurrentCultureIgnoreCase))
+            {
+                var customPart = part.Substring(7).Trim();
+
+                var pairs = customPart
+                    .Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Trim());
+
+                foreach (var pair in pairs)
+                {
+                    var eq = pair.IndexOf('=');
+                    if (eq <= 0) continue;
+
+                    var rawName = pair.Substring(0, eq).Trim();
+                    var rawValue = pair.Substring(eq + 1).Trim();
+
+                    var name = Uri.UnescapeDataString(rawName);
+                    var value = Uri.UnescapeDataString(rawValue);
+
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    if (string.IsNullOrWhiteSpace(value))
+                        value = "X";
+
+                    result[name] = value.ToUpperInvariant();
+                }
+            }
+            else if (part.StartsWith("Uten:", StringComparison.CurrentCultureIgnoreCase))
+            {
+                var s = part.Substring(5).Trim();
+                foreach (var rawName in s.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()))
+                {
+                    var name = Uri.UnescapeDataString(rawName);
+                    if (!string.IsNullOrWhiteSpace(name))
+                        result[name] = "--";
+                }
+            }
+            else if (part.StartsWith("Ekstra:", StringComparison.CurrentCultureIgnoreCase))
+            {
+                var s = part.Substring(7).Trim();
+                foreach (var rawName in s.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()))
+                {
+                    var name = Uri.UnescapeDataString(rawName);
+                    if (!string.IsNullOrWhiteSpace(name))
+                        result[name] = "XX";
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static void AddGridCell(Grid grid, int row, int col, string text, double fontSize = 10, TextAlignment align = TextAlignment.Left)
+    {
+        var tb = new TextBlock
+        {
+            Text = text,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = fontSize,
+            TextAlignment = align,
+            Margin = new Thickness(0),
+            TextWrapping = TextWrapping.Wrap
         };
 
-        if (bold)
-            p.FontWeight = FontWeights.Bold;
+        Grid.SetRow(tb, row);
+        Grid.SetColumn(tb, col);
+        grid.Children.Add(tb);
+    }
 
-        return new TableCell(p)
+    private static TextBlock Text(string text, bool bold = false, double size = 11)
+    {
+        return new TextBlock
         {
-            Padding = new Thickness(0),
-            BorderBrush = border ? Brushes.Black : Brushes.Transparent,
-            BorderThickness = border ? new Thickness(0.5) : new Thickness(0)
+            Text = text,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = size,
+            FontWeight = bold ? FontWeights.Bold : FontWeights.Normal,
+            Margin = new Thickness(0),
+            TextWrapping = TextWrapping.Wrap
+        };
+    }
+
+    private static FrameworkElement Spacer(double height)
+    {
+        return new Border { Height = height, Background = Brushes.Transparent };
+    }
+
+    private static Image? TryLogoImage()
+    {
+        try
+        {
+            return new Image
+            {
+                Source = new BitmapImage(new Uri("pack://application:,,,/Assets/logo.png")),
+                Width = 210,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 2, 0, 2)
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static Image? BuildQrImage(string address)
+    {
+        if (string.IsNullOrWhiteSpace(address)) return null;
+
+        var trimmed = address.Trim();
+        if (trimmed == "-" || trimmed.Length < 3) return null;
+
+        var url = "https://www.google.com/maps/search/?api=1&query=" + Uri.EscapeDataString(trimmed);
+
+        using var gen = new QRCodeGenerator();
+        using var data = gen.CreateQrCode(url, QRCodeGenerator.ECCLevel.Q);
+        using var qr = new PngByteQRCode(data);
+        var bytes = qr.GetGraphic(6);
+
+        var img = new BitmapImage();
+        img.BeginInit();
+        img.StreamSource = new MemoryStream(bytes);
+        img.CacheOption = BitmapCacheOption.OnLoad;
+        img.EndInit();
+
+        return new Image
+        {
+            Source = img,
+            Width = 72,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Left
         };
     }
 
@@ -498,7 +1099,9 @@ public class PrintService
 
         if (string.IsNullOrWhiteSpace(note)) return;
 
-        var parts = note.Split('|').Select(x => x.Trim()).ToList();
+        var parts = note.Split('|')
+            .Select(x => x.Trim())
+            .ToList();
 
         foreach (var p in parts)
         {
@@ -552,7 +1155,11 @@ public class PrintService
     {
         if (string.IsNullOrWhiteSpace(order.Notes)) return null;
 
-        var parts = order.Notes.Split('|').Select(x => x.Trim()).Where(x => x.Length > 0).ToList();
+        var parts = order.Notes.Split('|')
+            .Select(x => x.Trim())
+            .Where(x => x.Length > 0)
+            .ToList();
+
         if (parts.Count == 0) return null;
 
         parts.RemoveAll(p => Regex.IsMatch(p, @"\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}"));
@@ -561,114 +1168,6 @@ public class PrintService
 
         var text = string.Join(" | ", parts).Trim();
         return text.Length == 0 ? null : text;
-    }
-
-    private static IEnumerable<string> WrapMono(string text, int width)
-    {
-        text = (text ?? "").Replace("\r", "").Trim();
-        if (text.Length == 0) yield break;
-
-        foreach (var line in text.Split('\n'))
-        {
-            var s = line.TrimEnd();
-            while (s.Length > width)
-            {
-                yield return s.Substring(0, width);
-                s = s.Substring(width);
-            }
-            if (s.Length > 0) yield return s;
-        }
-    }
-
-    private static Block MonoBlock(List<string> lines, bool boldTitle = false)
-    {
-        var p = new Paragraph { Margin = new Thickness(0) };
-
-        for (int i = 0; i < lines.Count; i++)
-        {
-            var run = new Run(lines[i]);
-            if (boldTitle && i == 0) run.FontWeight = FontWeights.Bold;
-            p.Inlines.Add(run);
-            if (i < lines.Count - 1)
-                p.Inlines.Add(new LineBreak());
-        }
-
-        return p;
-    }
-
-    private static Block MonoLine(string left, string right, bool bold = false)
-    {
-        left ??= "";
-        right ??= "";
-
-        const int maxLeft = 34;
-        var l = left.Length > maxLeft ? left.Substring(0, maxLeft) : left;
-        var pad = Math.Max(1, maxLeft - l.Length);
-        var text = l + new string(' ', pad) + right;
-
-        var p = new Paragraph(new Run(text)) { Margin = new Thickness(0) };
-        if (bold) p.FontWeight = FontWeights.Bold;
-        return p;
-    }
-
-    private static Block? TryLogoBlock()
-    {
-        try
-        {
-            var img = new Image
-            {
-                Source = new BitmapImage(new Uri("pack://application:,,,/Assets/logo.png")),
-                Width = 240,
-                Stretch = Stretch.Uniform,
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-
-            return new BlockUIContainer(img) { Margin = new Thickness(0, 4, 0, 2) };
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static Block? BuildQrBlockForAddress(string address)
-    {
-        if (string.IsNullOrWhiteSpace(address)) return null;
-
-        var trimmed = address.Trim();
-        if (trimmed == "-" || trimmed.Length < 3) return null;
-
-        var url = "https://www.google.com/maps/search/?api=1&query=" + Uri.EscapeDataString(trimmed);
-
-        using var gen = new QRCodeGenerator();
-        using var data = gen.CreateQrCode(url, QRCodeGenerator.ECCLevel.Q);
-        using var qr = new PngByteQRCode(data);
-        var bytes = qr.GetGraphic(6);
-
-        var img = new BitmapImage();
-        img.BeginInit();
-        img.StreamSource = new MemoryStream(bytes);
-        img.CacheOption = BitmapCacheOption.OnLoad;
-        img.EndInit();
-
-        var image = new Image
-        {
-            Source = img,
-            Width = 90,
-            Stretch = Stretch.Uniform,
-            HorizontalAlignment = HorizontalAlignment.Left
-        };
-
-        var wrap = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
-        wrap.Children.Add(new TextBlock
-        {
-            Text = "Skann for kart",
-            FontSize = 10,
-            Margin = new Thickness(0, 0, 0, 2)
-        });
-        wrap.Children.Add(image);
-
-        return new BlockUIContainer(wrap) { Margin = new Thickness(0) };
     }
 
     private static DateTime? GetScheduledLocal(Order order)
@@ -692,11 +1191,4 @@ public class PrintService
     }
 
     private static double MmToPx(double mm) => (mm / 25.4) * 96.0;
-
-    private sealed class KitchenMatrixColumn
-    {
-        public string Number { get; set; } = "";
-        public string Size { get; set; } = "";
-        public Dictionary<string, string> Marks { get; set; } = new(StringComparer.CurrentCultureIgnoreCase);
-    }
 }
