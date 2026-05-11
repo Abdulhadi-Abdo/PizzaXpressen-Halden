@@ -326,22 +326,19 @@ public class PrintService
 
     private static double GetKitchenColumnScale(int pizzaCount)
     {
-        if (pizzaCount <= 3)
+        if (pizzaCount <= 4)
             return 1.0;
 
-        if (pizzaCount == 4)
-            return 0.90;
-
         if (pizzaCount == 5)
-            return 0.82;
+            return 0.80;
 
         if (pizzaCount == 6)
-            return 0.76;
+            return 0.74;
 
         if (pizzaCount == 7)
-            return 0.70;
+            return 0.68;
 
-        return 0.64;
+        return 0.62;
     }
 
     private sealed class KitchenPizzaColumn
@@ -536,8 +533,8 @@ public class PrintService
 
         int pizzaCount = Math.Max(1, pizzaColumns.Count);
 
-        double totalTableWidth = pizzaCount <= 2 ? 370 : 410;
-        double firstColumnWidth = pizzaCount <= 2 ? 170 : 145;
+        double totalTableWidth = pizzaCount <= 2 ? 300 : pizzaCount <= 4 ? 320 : 340;
+        double firstColumnWidth = pizzaCount <= 2 ? 135 : pizzaCount <= 4 ? 110 : 105;
         double pizzaColumnWidth = (totalTableWidth - firstColumnWidth) / pizzaCount;
 
         grid.ColumnDefinitions.Add(new ColumnDefinition
