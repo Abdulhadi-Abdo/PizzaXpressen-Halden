@@ -137,8 +137,10 @@ public class PrintService
             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        int totalRows = toppings.Count + 2;
+        int totalRows = toppings.Count + 3;
         double scale = GetKitchenTableScale(totalRows);
+
+        var userNotes = GetUserNotes(order);
 
         double baseHeaderHeight = 38;
         double total = 0;
@@ -147,9 +149,17 @@ public class PrintService
         total += 4;
         total += 16 * scale;
         total += 16 * scale;
+        total += 16 * scale;
 
         foreach (var topping in toppings)
             total += EstimateKitchenLabelRowHeight(DisplayItemName(topping)) * scale;
+
+        if (!string.IsNullOrWhiteSpace(userNotes))
+        {
+            total += 6;
+            total += 16;
+            total += EstimateTextLineCount(userNotes, 34) * 14;
+        }
 
         total += 4;
 
@@ -376,6 +386,14 @@ public class PrintService
         if (pizzaColumns.Count > 0)
             root.Children.Add(BuildKitchenCombinedTable(pizzaColumns));
 
+        var userNotes = GetUserNotes(order);
+        if (!string.IsNullOrWhiteSpace(userNotes))
+        {
+            root.Children.Add(Spacer(6));
+            root.Children.Add(Text("Merknad:", true, 10));
+            root.Children.Add(Text(userNotes, false, 10));
+        }
+
         return root;
     }
 
@@ -523,7 +541,7 @@ public class PrintService
             .OrderBy(x => x, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        int totalRows = allToppings.Count + 2;
+        int totalRows = allToppings.Count + 3;
         double scale = Math.Min(GetKitchenTableScale(totalRows), GetKitchenColumnScale(pizzaColumns.Count));
 
         var grid = new Grid
@@ -598,8 +616,14 @@ public class PrintService
         }
 
         AddRow(
-            new[] { "Nr x Ant" }
-            .Concat(pizzaColumns.Select(x => FormatKitchenNrAndQuantity(x.NumberText, x.Quantity)))
+            new[] { "Nr" }
+            .Concat(pizzaColumns.Select(x => x.NumberText))
+            .ToArray(),
+            true);
+
+        AddRow(
+            new[] { "Ant" }
+            .Concat(pizzaColumns.Select(x => x.Quantity.ToString(CultureInfo.InvariantCulture)))
             .ToArray(),
             true);
 
