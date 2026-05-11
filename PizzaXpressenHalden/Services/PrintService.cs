@@ -364,8 +364,10 @@ public class PrintService
         };
 
         root.Children.Add(Text($"{customerName} / {phone}", false, 11));
+        var kitchenTimeLabel = order.DeliveryType == DeliveryType.Pickup ? "Hentes" : "Leveres";
+
         root.Children.Add(Text(
-            $"{deliveryFlag}: {order.Id}, Lapp: 1, Inn: {createdLocal:dd.MM HH:mm}, Leveres: {(scheduled != null ? scheduled.Value.ToString("dd.MM HH:mm") : "-")}",
+            $"{deliveryFlag}: {order.Id}, Lapp: 1, Inn: {createdLocal:dd.MM HH:mm}, {kitchenTimeLabel}: {(scheduled != null ? scheduled.Value.ToString("dd.MM HH:mm") : "-")}",
             false, 10));
 
         root.Children.Add(Spacer(4));
@@ -662,10 +664,13 @@ public class PrintService
         var rightInfo = new StackPanel();
         rightInfo.Children.Add(Text($"Kunde: {customerName} / {phone}", true, receiptHeaderFont));
         rightInfo.Children.Add(Text(address, false, receiptBodyFont));
+        var receiptTimeLabel = order.DeliveryType == DeliveryType.Pickup ? "Hentes" : "Leveres";
+
         rightInfo.Children.Add(Text(
             scheduled != null
-                ? $"Leveres: {scheduled:dd.MM.yyyy} kl. {scheduled:HH:mm}"
-                : "Leveres: -", false, receiptBodyFont));
+                ? $"{receiptTimeLabel}: {scheduled:dd.MM.yyyy} kl. {scheduled:HH:mm}"
+                : $"{receiptTimeLabel}: -",
+            false, receiptBodyFont));
 
         Grid.SetColumn(leftInfo, 0);
         Grid.SetColumn(rightInfo, 1);
@@ -817,7 +822,8 @@ public class PrintService
         root.Children.Add(Text(address, false, 11));
         root.Children.Add(Spacer(6));
 
-        root.Children.Add(Text($"## {pizzaCount} Pizza{(pizzaCount == 1 ? "" : "er")} skal bringes", true, 17));
+        var driverActionText = order.DeliveryType == DeliveryType.Pickup ? "skal hentes" : "skal bringes";
+        root.Children.Add(Text($"## {pizzaCount} Pizza{(pizzaCount == 1 ? "" : "er")} {driverActionText}", true, 17));
         root.Children.Add(Spacer(7));
 
         var driverExtras = BuildDriverExtrasColumns(order);
@@ -832,7 +838,8 @@ public class PrintService
 
         var leftFooter = new StackPanel();
         leftFooter.Children.Add(Text($"Dato/tid: {createdLocal:dd.MM.yyyy} kl. {createdLocal:HH:mm}", false, 10));
-        leftFooter.Children.Add(Text(scheduled != null ? $"Levering: {scheduled:HH:mm}" : "Levering: -", false, 10));
+        var driverTimeLabel = order.DeliveryType == DeliveryType.Pickup ? "Henting" : "Levering";
+        leftFooter.Children.Add(Text(scheduled != null ? $"{driverTimeLabel}: {scheduled:HH:mm}" : $"{driverTimeLabel}: -", false, 10));
 
         var rightFooter = Text($"Total: {total:0.00}", true, 14);
         rightFooter.TextAlignment = TextAlignment.Right;
