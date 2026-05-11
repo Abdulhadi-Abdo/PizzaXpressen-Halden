@@ -10,6 +10,22 @@
             <Setter Property="LineHeight" Value="18"/>
             <Setter Property="Margin" Value="0,0,0,8"/>
         </Style>
+
+        <!-- Mørkere farge inni selve boksen når feltet er aktivt -->
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#A0A0A0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="2"/>
+            <Style.Triggers>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="Background" Value="#C8DCC8"/>
+                    <Setter Property="BorderBrush" Value="#2b7a2b"/>
+                    <Setter Property="BorderThickness" Value="2"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
     </UserControl.Resources>
 
     <UserControl.InputBindings>

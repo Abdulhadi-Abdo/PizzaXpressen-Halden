@@ -293,7 +293,6 @@ public partial class OrderViewModel : ObservableObject
             .ToListAsync();
 
         _pricedToppingUnitPrices.Clear();
-
         foreach (var x in ex)
         {
             if (IsPricedSpecialToppingName(x.Navn))
@@ -301,7 +300,6 @@ public partial class OrderViewModel : ObservableObject
         }
 
         ToppingInputs.Clear();
-
         foreach (var t in toppings)
         {
             var isPriced = IsPricedSpecialToppingName(t);
@@ -584,7 +582,6 @@ public partial class OrderViewModel : ObservableObject
         if (!int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var nr))
         {
             ClearActivePizzaDraft();
-            RecalcTotal();
             return;
         }
 
@@ -598,7 +595,6 @@ public partial class OrderViewModel : ObservableObject
         if (pizza == null)
         {
             ClearActivePizzaDraft();
-            RecalcTotal();
             return;
         }
 
@@ -647,7 +643,6 @@ public partial class OrderViewModel : ObservableObject
         {
             ClearSplitDraft();
             ClearActivePizzaDraft();
-            RecalcTotal();
             return;
         }
 
@@ -769,8 +764,6 @@ public partial class OrderViewModel : ObservableObject
         UpdateActiveHalfLabel();
         UpdateDisplayIngredientsForActiveHalf();
         ApplyCurrentToppingStateToBoxes();
-        RefreshActivePizzaPrice();
-        RecalcTotal();
     }
 
     private void UpdateActiveHalfLabel() => ActiveHalfLabel = _activeHalf == 1 ? "Redigerer halvdel 1" : "Redigerer halvdel 2";
@@ -1136,7 +1129,17 @@ public partial class OrderViewModel : ObservableObject
 
     private async Task SaveAndPrintAsync()
     {
-        if (IsEditingPizza) CancelPizzaEdit();
+        // Hvis brukeren har valgt/redigert en pizza, men glemmer å trykke PageDown/Legg til,
+        // legges den automatisk inn før utskrift.
+        if (ActivePizza != null)
+        {
+            AddOrUpdatePizza();
+        }
+        else if (IsEditingPizza)
+        {
+            CancelPizzaEdit();
+        }
+
         if (Items.Count == 0) return;
         if (Items.All(i => i.ItemName == "Kj.tillegg")) return;
 
